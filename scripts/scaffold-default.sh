@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scaffold-default.sh — Fast batch scaffold for default profile projects
-# Default profile: fullstack Next.js + MongoDB + Tailwind + Docker + SEO + CI
+# Default profile: fullstack Next.js + StrictDB + Tailwind + Docker + SEO + CI
 #
 # Usage: bash scripts/scaffold-default.sh <project-path> <project-name> <starter-kit-root>
 #
@@ -71,7 +71,7 @@ progress() {
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  NEW PROJECT: $PROJECT_NAME (default profile)"
-echo "  Next.js + MongoDB + Tailwind + Docker + SEO + CI"
+echo "  Next.js + StrictDB + Tailwind + Docker + SEO + CI"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -229,8 +229,8 @@ cat > "$PROJECT_PATH/.claude/features.json" << FEATURES_EOF
 }
 FEATURES_EOF
 
-# ── Step 5: Copy MongoDB wrapper + query system ───────────────────────────────
-progress "Copying MongoDB wrapper + query system..."
+# ── Step 5: Copy StrictDB wrapper + query system ──────────────────────────────
+progress "Copying StrictDB wrapper + query system..."
 cp "$STARTER_KIT/src/core/db/index.ts" "$PROJECT_PATH/src/core/db/index.ts"
 cp "$STARTER_KIT/scripts/db-query.ts" "$PROJECT_PATH/scripts/db-query.ts"
 cp "$STARTER_KIT/scripts/queries/example-find-user.ts" "$PROJECT_PATH/scripts/queries/"
@@ -542,6 +542,7 @@ cat > "$PROJECT_PATH/package.json" << PKGJSON_EOF
     "clean": "rm -rf .next coverage test-results playwright-report"
   },
   "dependencies": {
+    "strictdb": "^0.1.0",
     "mongodb": "^6.5.0",
     "next": "^15.0.0",
     "react": "^19.0.0",
@@ -720,14 +721,14 @@ WRONG:   /api/users
 
 Every API endpoint MUST use `/api/v1/` prefix. No exceptions.
 
-### 3. Database Access — Wrapper Only (`src/core/db/index.ts`)
+### 3. Database Access — StrictDB Wrapper Only (`src/core/db/index.ts`)
 
 **ALL database access goes through `src/core/db/index.ts`. No exceptions.**
 
-- NEVER create `new MongoClient()` anywhere else
-- NEVER import `mongodb` directly except in `src/core/db/index.ts`
+- NEVER create database clients anywhere else
+- NEVER import database drivers directly except in `src/core/db/index.ts`
 - ALWAYS import from `src/core/db/` for all database operations
-- All query inputs are automatically sanitized against NoSQL injection
+- All query inputs are automatically sanitized against injection
 
 **Test queries go through `scripts/db-query.ts`:**
 1. Create a query file in `scripts/queries/<name>.ts`
@@ -1038,10 +1039,8 @@ cat > "$PROJECT_PATH/.env.example" << 'ENVEX_EOF'
 NODE_ENV=development
 PORT=3000
 
-# MongoDB
-MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/mydb?retryWrites=true&w=majority
-MONGO_DB_NAME=mydb
-DB_SANITIZE_INPUTS=true
+# StrictDB
+STRICTDB_URI=mongodb+srv://user:password@cluster.mongodb.net/mydb?retryWrites=true&w=majority
 
 # Rybbit Analytics
 NEXT_PUBLIC_RYBBIT_SITE_ID=your_rybbit_site_id
@@ -1122,7 +1121,7 @@ cat > "$PROJECT_PATH/README.md" << README_EOF
 
 - **Framework:** Next.js (App Router)
 - **Language:** TypeScript (strict mode)
-- **Database:** MongoDB (native driver, centralized wrapper)
+- **Database:** StrictDB (unified driver)
 - **Styling:** Tailwind CSS
 - **Testing:** Vitest (unit) + Playwright (E2E)
 - **Deployment:** Docker (multi-stage, standalone)
@@ -1221,7 +1220,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "  ${FILE_COUNT} files  |  16 commands  |  2 skills  |  2 agents  |  9 hooks"
 echo ""
-echo "  Stack: Next.js + MongoDB + Tailwind + Docker"
+echo "  Stack: Next.js + StrictDB + Tailwind + Docker"
 echo "  Testing: Vitest (unit) + Playwright (E2E)"
 echo "  CI: GitHub Actions"
 echo ""
@@ -1232,6 +1231,6 @@ echo "    claude             # Start Claude Code — run /help to see commands"
 echo ""
 echo "  Configure environment:"
 echo "    cp .env.example .env"
-echo "    # Edit .env with your MongoDB URI, Rybbit ID, etc."
+echo "    # Edit .env with your StrictDB URI, Rybbit ID, etc."
 echo "    # Or run /setup in Claude for interactive configuration"
 echo ""

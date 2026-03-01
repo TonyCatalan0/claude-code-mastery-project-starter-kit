@@ -122,19 +122,16 @@ ls -1 global-claude-md/
 wc -l src/core/db/index.ts
 ```
 
-- [ ] `src/core/db/index.ts` exists
-- [ ] File size < 700 lines (currently ~655)
-- [ ] Exports: `connect`, `closePool`, `getDb`, `getCollection`
+- [ ] `src/core/db/index.ts` exists (thin StrictDB adapter)
+- [ ] File size < 300 lines (currently ~270)
+- [ ] Exports: `connect`, `closePool`, `raw`
 - [ ] Exports: `queryOne`, `queryMany`, `queryWithLookup`, `count`
-- [ ] Exports: `insertOne`, `insertMany`, `updateOne`, `updateMany`, `deleteOne`, `deleteMany`, `bulkOps`
-- [ ] Exports: `withTransaction`, `rawCollection`
-- [ ] Exports: `registerIndex`, `ensureIndexes`
+- [ ] Exports: `insertOne`, `insertMany`, `updateOne`, `updateMany`, `deleteOne`, `deleteMany`, `batch`
+- [ ] Exports: `describe`, `validate`, `explain`
+- [ ] Exports: `registerCollection`, `ensureIndexes`
 - [ ] Exports: `gracefulShutdown`
-- [ ] Exports: `sanitizeFilter`, `configureSanitization`
-- [ ] Uses `MongoClient` singleton via `globalThis` symbol
-- [ ] Has pool presets: `high` (20), `standard` (10), `low` (5)
-- [ ] `sanitize()` function strips `$`-prefixed keys
-- [ ] `sanitizePipeline()` only sanitizes `$match` stages
+- [ ] Uses StrictDB singleton via `globalThis` symbol
+- [ ] `src/core/db/sql.ts` does NOT exist (replaced by StrictDB)
 
 Verify exports exist:
 
@@ -142,7 +139,7 @@ Verify exports exist:
 grep -c "^export " src/core/db/index.ts
 ```
 
-Expected: >= 18 exported functions/interfaces.
+Expected: >= 16 exported functions/types.
 
 ### 1.8 Scripts Directory
 
@@ -267,7 +264,8 @@ cat package.json | python3 -c "import sys,json; [print(k) for k in json.load(sys
 cat package.json | python3 -c "import sys,json; d=json.load(sys.stdin); print('deps:', list(d.get('dependencies',{}).keys())); print('devDeps:', list(d.get('devDependencies',{}).keys()))"
 ```
 
-- [ ] `mongodb` in dependencies (^6.5.0)
+- [ ] `strictdb` in dependencies (^0.1.0)
+- [ ] `mongodb` in dependencies (^6.5.0, peer dep for StrictDB MongoDB backend)
 - [ ] `@playwright/test` in devDependencies (^1.42.0)
 - [ ] `tsx` in devDependencies (^4.7.0)
 - [ ] `typescript` in devDependencies (^5.4.0)
@@ -380,8 +378,7 @@ cat .env.example
 
 - [ ] Contains `NODE_ENV=development`
 - [ ] Contains `PORT=3001`
-- [ ] Contains `DATABASE_URL=your_database_connection_string_here` (placeholder, not real)
-- [ ] Contains `DB_SANITIZE_INPUTS=true`
+- [ ] Contains `STRICTDB_URI=YOUR_DATABASE_CONNECTION_STRING_HERE` (placeholder, not real)
 - [ ] Contains `JWT_SECRET=your_jwt_secret_here` (placeholder, not real)
 - [ ] No real API keys, passwords, or tokens present
 
@@ -765,7 +762,7 @@ ls -R ~/projects/TESTPROJECT/scripts/ 2>/dev/null
 ```
 
 - [ ] `src/` directory exists
-- [ ] `src/core/db/index.ts` exists (MongoDB wrapper — default profile has `database = mongo`)
+- [ ] `src/core/db/index.ts` exists (StrictDB adapter — default profile has `database = mongo`)
 - [ ] `tests/unit/` exists
 - [ ] `tests/integration/` exists
 - [ ] `tests/e2e/` exists
@@ -1016,46 +1013,40 @@ ls ~/projects/TESTPROJECT-GO/node_modules/ 2>/dev/null
 
 ## Section 16: SQL Database Wrapper
 
-> Verify the SQL wrapper template exists and exports the expected API.
+> Verify that `sql.ts` no longer exists (replaced by StrictDB unified wrapper in `index.ts`).
 
-### 16.1 File Exists
-
-```bash
-wc -l src/core/db/sql.ts
-```
-
-- [ ] `src/core/db/sql.ts` exists
-- [ ] File size < 400 lines
-
-### 16.2 Exports
+### 16.1 sql.ts Removed
 
 ```bash
-grep -c "^export " src/core/db/sql.ts
+ls src/core/db/sql.ts 2>/dev/null && echo "FAIL: sql.ts still exists" || echo "PASS: sql.ts removed"
 ```
 
-- [ ] Exports: `connect`, `getPool`, `closePool`, `gracefulShutdown`
-- [ ] Exports: `queryOne`, `queryMany`, `count`
-- [ ] Exports: `execute`, `insertOne`, `insertMany`, `updateOne`, `deleteOne`
-- [ ] Exports: `withTransaction`
-- [ ] Exports: `buildWhere`
-- [ ] Expected: >= 12 exported functions/interfaces
+- [ ] `src/core/db/sql.ts` does NOT exist
+- [ ] `src/core/db/index.ts` handles all backends via StrictDB
 
-### 16.3 Driver Detection
+### 16.2 StrictDB Adapter Exports
 
 ```bash
-grep "detectDriver" src/core/db/sql.ts
+grep -c "^export " src/core/db/index.ts
 ```
 
-- [ ] Detects `postgresql://` and `postgres://` → pg
-- [ ] Detects `mysql://` → mysql2
-- [ ] Detects `mssql://` → mssql
-- [ ] Detects `file:` and `sqlite:` → better-sqlite3
+- [ ] Exports: `connect`, `closePool`, `gracefulShutdown`, `raw`
+- [ ] Exports: `queryOne`, `queryMany`, `queryWithLookup`, `count`
+- [ ] Exports: `insertOne`, `insertMany`, `updateOne`, `updateMany`, `deleteOne`, `deleteMany`, `batch`
+- [ ] Exports: `describe`, `validate`, `explain`
+- [ ] Exports: `registerCollection`, `ensureIndexes`
+- [ ] Expected: >= 16 exported functions/types
 
-### 16.4 Pool Presets
+### 16.3 Backend Auto-Detection (via StrictDB)
 
-- [ ] `high` preset = max 20
-- [ ] `standard` preset = max 10
-- [ ] `low` preset = max 5
+StrictDB auto-detects backend from `STRICTDB_URI` scheme:
+
+- [ ] `mongodb://` / `mongodb+srv://` → MongoDB
+- [ ] `postgresql://` / `postgres://` → PostgreSQL
+- [ ] `mysql://` → MySQL
+- [ ] `mssql://` → MSSQL
+- [ ] `file:` / `sqlite:` → SQLite
+- [ ] `http://` / `https://` → Elasticsearch
 
 ---
 

@@ -164,8 +164,8 @@ If **yes (confirmed)** — ask: "Which regions?" (default: US + EU). Then EVERY 
 This project deploys to multiple regions. EVERY region has isolated infrastructure.
 
 ### Region Map (from .env)
-- `_US` suffix = US region (e.g., MONGODB_URI_US, DOKPLOY_URL_US)
-- `_EU` suffix = EU region (e.g., MONGODB_URI_EU, DOKPLOY_URL_EU)
+- `_US` suffix = US region (e.g., STRICTDB_URI_US, DOKPLOY_URL_US)
+- `_EU` suffix = EU region (e.g., STRICTDB_URI_EU, DOKPLOY_URL_EU)
 - No suffix = default/shared (e.g., DOCKER_IMAGE_NAME applies to all regions)
 
 ### ABSOLUTE RULES
@@ -180,19 +180,17 @@ This project deploys to multiple regions. EVERY region has isolated infrastructu
 ### Category: Database
 
 If single-region:
-- Ask: "What database are you using?" (MongoDB / PostgreSQL / SQLite / None)
-- If MongoDB: ask for connection string or offer to build from parts (username, password, cluster, db name)
-- If PostgreSQL: ask for connection string
-- Writes: `MONGODB_URI=...` or `DATABASE_URL=...`
+- Ask: "What database are you using?" (MongoDB / PostgreSQL / MySQL / SQLite / None)
+- Ask for connection string (StrictDB auto-detects backend from URI scheme)
+- Writes: `STRICTDB_URI=...`
 
 If multi-region:
 - Ask for EACH region's database separately:
-  - "What's the MongoDB connection string for **US**?" → `MONGODB_URI_US`
-  - "What's the MongoDB connection string for **EU**?" → `MONGODB_URI_EU`
-  - Also set `MONGO_DB_NAME` (shared — same db name in both regions)
-- Offer to build from parts for each region:
-  - US: username, password, cluster → `MONGODB_URI_US=mongodb+srv://user:pass@us-cluster/dbname`
-  - EU: username, password, cluster → `MONGODB_URI_EU=mongodb+srv://user:pass@eu-cluster/dbname`
+  - "What's the database connection string for **US**?" → `STRICTDB_URI_US`
+  - "What's the database connection string for **EU**?" → `STRICTDB_URI_EU`
+- Offer to build from parts for each region (MongoDB example):
+  - US: username, password, cluster → `STRICTDB_URI_US=mongodb+srv://user:pass@us-cluster/dbname`
+  - EU: username, password, cluster → `STRICTDB_URI_EU=mongodb+srv://user:pass@eu-cluster/dbname`
 
 **NEVER display connection strings back.** Just confirm "US database configured ✓" / "EU database configured ✓"
 
@@ -237,8 +235,8 @@ If multi-region — ask for EACH region separately:
 After collecting, explain:
 ```
 Region routing:
-  US VPS (<VPS_IP_US>) → Dokploy US → pulls :latest → connects to MONGODB_URI_US
-  EU VPS (<VPS_IP_EU>) → Dokploy EU → pulls :eu    → connects to MONGODB_URI_EU
+  US VPS (<VPS_IP_US>) → Dokploy US → pulls :latest → connects to STRICTDB_URI_US
+  EU VPS (<VPS_IP_EU>) → Dokploy EU → pulls :eu    → connects to STRICTDB_URI_EU
 
 Each container gets DEPLOY_REGION=us or DEPLOY_REGION=eu at runtime.
 The app reads DEPLOY_REGION and picks the right database URI.
@@ -288,8 +286,8 @@ Also write a region reference comment block at the top of `.env`:
 # _EU suffix = EU region infrastructure
 # No suffix  = shared across all regions
 #
-# US: VPS_IP_US → DOKPLOY_URL_US → MONGODB_URI_US
-# EU: VPS_IP_EU → DOKPLOY_URL_EU → MONGODB_URI_EU
+# US: VPS_IP_US → DOKPLOY_URL_US → STRICTDB_URI_US
+# EU: VPS_IP_EU → DOKPLOY_URL_EU → STRICTDB_URI_EU
 # ==========================================
 ```
 
@@ -302,7 +300,7 @@ Project Setup Complete
 ✓ Application basics (NODE_ENV, PORT)
 ✓ GitHub (username: <username>)
 ✓ Analytics (Rybbit configured)
-✓ Database (MongoDB connected)
+✓ Database (connected via StrictDB)
 ✓ Docker (image: <user>/<project>)
 ✓ Deployment (Dokploy on Hostinger)
 ✓ RuleCatch (region: us)
@@ -320,16 +318,16 @@ Project Setup Complete
 ✓ GitHub (username: <username>)
 ✓ Analytics (Rybbit configured)
 ✓ Multi-region (US + EU)
-✓ Database US (MongoDB connected)
-✓ Database EU (MongoDB connected)
+✓ Database US (connected via StrictDB)
+✓ Database EU (connected via StrictDB)
 ✓ Docker (image: <user>/<project>, tags: :latest for US, :eu for EU)
 ✓ Deployment US (Dokploy on Hostinger — <VPS_IP_US>)
 ✓ Deployment EU (Dokploy on Hostinger — <VPS_IP_EU>)
 ✓ RuleCatch (region: us)
 
 Region routing:
-  US: <VPS_IP_US> → Dokploy US → :latest → MONGODB_URI_US
-  EU: <VPS_IP_EU> → Dokploy EU → :eu     → MONGODB_URI_EU
+  US: <VPS_IP_US> → Dokploy US → :latest → STRICTDB_URI_US
+  EU: <VPS_IP_EU> → Dokploy EU → :eu     → STRICTDB_URI_EU
 
 .env is gitignored: ✓
 .env.example updated: ✓

@@ -54,7 +54,7 @@ Scan the project and generate a system overview diagram.
 
 4. **Database usage** — find which services access the database
    ```bash
-   grep -rl "queryOne\|queryMany\|insertOne\|updateOne\|bulkOps\|MongoClient\|PrismaClient" src/ 2>/dev/null
+   grep -rl "queryOne\|queryMany\|insertOne\|updateOne\|bulkOps\|batch\|StrictDB\|MongoClient\|PrismaClient" src/ 2>/dev/null
    ```
 
 5. **External service calls** — find adapters and API calls

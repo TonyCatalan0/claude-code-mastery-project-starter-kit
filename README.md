@@ -40,15 +40,21 @@ Clone this repo and modify the commands, hooks, skills, and rules to match your 
 
 Progress through these phases at your own pace. Each builds on the previous one.
 
+The starter kit supports two development workflows:
+- **Classic** — `/review`, `/commit`, `/create-api`, `/create-e2e` (individual commands, you drive)
+- **MDD** — `/mdd` (structured Document → Test → Code workflow, Claude drives with your approval)
+
+Both use the same hooks, rules, and quality gates. MDD adds structured documentation and audit capabilities on top.
+
 ```
 Phase 1                Phase 2              Phase 3              Phase 4              Phase 5
-INITIAL SETUP          DAILY WORKFLOW       DOCS & TESTING       DEPLOYMENT           ADVANCED
+INITIAL SETUP          BUILD FEATURES       QUALITY & TESTING    DEPLOYMENT           ADVANCED
 (5 minutes)
 
-/install-global   -->  /review         -->  /diagram all    -->  /optimize-docker -->  /refactor
-/new-project           /commit              /test-plan           /security-check       /what-is-my-ai-doing
-cd my-app              /progress            /create-e2e          deploy                /worktree
-/setup                                                                                 custom rules
+/install-global   -->  /mdd <feature>  -->  /mdd audit      -->  /optimize-docker -->  /refactor
+/new-project           /review              /mdd status          /security-check       /what-is-my-ai-doing
+cd my-app              /commit              /create-e2e          deploy                /worktree
+/setup                 /create-api          /test-plan                                 custom rules
 ```
 
 ### First 5 Minutes
@@ -61,7 +67,14 @@ cd ~/projects/my-app               # Enter your new project
 pnpm install && pnpm dev           # Start building
 ```
 
-Use `/help` to see all 26 commands at any time.
+### First Feature (MDD Workflow)
+
+```bash
+/mdd add user authentication       # Claude interviews you, writes docs, generates
+                                    # test skeletons, presents a plan, then builds
+```
+
+Use `/help` to see all 27 commands at any time.
 
 ## See It In Action
 
@@ -82,13 +95,98 @@ Everything you need to start a Claude Code project the right way — security, a
 
 - **CLAUDE.md** — Battle-tested project instructions with 11 numbered critical rules for security, TypeScript, database wrappers, testing, and deployment
 - **Global CLAUDE.md** — Security gatekeeper for all projects. Never publish secrets, never commit .env files, standardized scaffolding rules
-- **26 Slash Commands** (16 project + 10 kit management) — `/help`, `/quickstart`, `/install-global`, `/setup`, `/show-user-guide`, `/diagram`, `/review`, `/commit`, `/progress`, `/test-plan`, `/architecture`, `/new-project`, `/security-check`, `/optimize-docker`, `/create-e2e`, `/create-api`, `/worktree`, `/what-is-my-ai-doing`, `/refactor`, `/set-project-profile-default`, `/add-project-setup`, `/projects-created`, `/remove-project`, `/convert-project-to-starter-kit`, `/update-project`, `/add-feature`
+- **27 Slash Commands** (17 project + 10 kit management) — `/mdd`, `/help`, `/quickstart`, `/install-global`, `/setup`, `/show-user-guide`, `/diagram`, `/review`, `/commit`, `/progress`, `/test-plan`, `/architecture`, `/new-project`, `/security-check`, `/optimize-docker`, `/create-e2e`, `/create-api`, `/worktree`, `/what-is-my-ai-doing`, `/refactor`, `/set-project-profile-default`, `/add-project-setup`, `/projects-created`, `/remove-project`, `/convert-project-to-starter-kit`, `/update-project`, `/add-feature`
 - **9 Hooks** — Deterministic enforcement that always runs. Block secrets, lint on save, verify no credentials, branch protection, port conflicts, Rybbit pre-deploy gate, E2E test gate, env sync warnings, and RuleCatch monitoring (optional — skips silently if not installed)
 - **Skills** — Context-aware templates: systematic code review checklist and full microservice scaffolding
 - **Custom Agents** — Read-only code reviewer for security audits. Test writer that creates tests with explicit assertions
 - **Documentation Templates** — Pre-structured ARCHITECTURE.md, INFRASTRUCTURE.md, and DECISIONS.md templates
-- **Testing Templates** — Master test checklist, issue tracking log, and a singleton database wrapper that prevents connection pool explosion
+- **Testing Templates** — Master test checklist, issue tracking log, and a unified database wrapper that prevents connection pool explosion
 - **Live AI Monitor** — See every tool call, token, cost, and violation in real-time with `/what-is-my-ai-doing`. Free monitor mode works instantly — no API key, no account. Run `pnpm ai:monitor` in a separate terminal. Zero token overhead
+
+## MDD Workflow — Manual-First Development ✨ NEW
+
+> **We used MDD to audit this starter kit.** Result: 20 findings discovered, 17 fixed, and 125 tests written from zero — all in **23 minutes**. The methodology the starter kit teaches was used to audit the starter kit itself.
+
+MDD is the built-in development methodology that turns Claude Code from a code generator into a development partner. Every feature starts with documentation. Every fix starts with an audit.
+
+### The Problem
+
+Most people prompt Claude Code like this: *"fix the bug in my auth system."* Claude reads 40 files, burns through context trying to understand your architecture, and produces something that technically compiles but misses the bigger picture.
+
+MDD flips this. You write structured documentation first, then Claude reads **one doc** instead of 40 files. It gets the full picture in 200 tokens instead of 20,000.
+
+### The Workflow: Document → Audit → Fix → Verify
+
+Every phase reads the output of the previous phase, compressing context further at each step:
+
+| Phase | What Happens |
+|-------|-------------|
+| 📋 **Document** | Write feature docs with YAML frontmatter in `.mdd/docs/` |
+| 🔍 **Audit** | Read source code, write incremental notes to disk (survives compaction) |
+| 📊 **Analyze** | Read notes only → produce severity-rated findings report |
+| 🔧 **Fix** | Execute pre-planned fixes with tests |
+| ✅ **Verify** | Tests pass, types check, documentation updated |
+
+### Usage — One Command, Three Modes
+
+```bash
+# Build a new feature (Document → Test skeletons → Implement → Verify)
+/mdd add user authentication with JWT tokens
+
+# Audit existing code (Read → Notes → Report → Fix)
+/mdd audit
+/mdd audit database    # audit a specific section
+
+# Check MDD status (docs, tests, findings, quality gates)
+/mdd status
+```
+
+**Build mode** (`/mdd <description>`) follows 6 phases: Understand → Document → Test Skeletons → Plan → Implement → Verify. Tests are generated *before* code — they define the finish line. Claude presents a build plan with named steps and time estimates, then waits for your approval before writing any code.
+
+**Audit mode** (`/mdd audit`) runs a complete security and quality audit. Claude reads all source files, writes incremental notes every 2 features (zero data loss through context compaction), then produces a severity-rated findings report and fixes everything.
+
+### The `.mdd/` Directory
+
+All MDD artifacts live in a single dotfile directory, gitignored by default:
+
+```
+.mdd/
+├── docs/                        # Feature documentation (one per feature)
+│   ├── 01-project-scaffolding.md
+│   ├── 02-profile-system.md
+│   └── ...
+└── audits/                      # Audit artifacts
+    ├── notes-2026-03-01.md      # Raw reading notes
+    ├── report-2026-03-01.md     # Structured findings
+    └── results-2026-03-01.md    # Before/after summary
+```
+
+### Real Results: Self-Audit
+
+| Phase | Time | Output |
+|-------|------|--------|
+| Phase 0: Documentation | ~25 min | 9 feature docs (795 lines) |
+| Phase 1: Read + Notes | 9 min 51s | 57+ files read, 837 lines of notes |
+| Phase 2: Analyze | 2 min 39s | 298-line report, 20 findings |
+| Phase 3: Fix All | 10 min 53s | 17/20 fixed, 125 tests written |
+| **Total** | **~48 min** | **20 findings, 125 tests from zero** |
+
+| Metric | Before MDD | After MDD |
+|--------|-----------|----------|
+| Unit tests | 0 | 94 |
+| Test files | 0 | 5 |
+| Documentation files | 3 | 14 |
+| Known issues documented | 0 | 84 |
+| Findings found & fixed | 0 | 17/20 |
+| Quality gate violations | 1 (651-line file) | 0 (split into 5 modules) |
+| Config validation | None (raw JSON.parse) | Zod schema with fail-fast |
+| Secret detection patterns | 4 basic | 10+ (GitHub, Slack, Stripe, PEM, JWT) |
+
+### The Incremental Write Trick
+
+The most important technical detail: when Claude reads files during an audit, context will compact. If your findings are only in memory, they're gone. Instead, Claude writes notes to disk every 2 features. If context compacts, it reads the tail of the notes file and picks up where it left off. Zero data loss across 6 complete audit cycles.
+
+---
 
 ## Featured Packages
 
@@ -139,7 +237,7 @@ This starter kit works with any language, framework, or database. Use `/new-proj
 | **Backend (Node.js)** | Fastify, Express, Hono | API scaffolding with `/create-api` |
 | **Backend (Go)** | Gin, Chi, Echo, Fiber, stdlib | Standard layout with cmd/internal/ |
 | **Backend (Python)** | FastAPI, Django, Flask | Async support, Pydantic, pytest |
-| **Database** | MongoDB, PostgreSQL, MySQL, MSSQL, SQLite | Centralized wrapper for each (NoSQL + SQL) |
+| **Database** | MongoDB, PostgreSQL, MySQL, MSSQL, SQLite, Elasticsearch | Unified StrictDB wrapper for all backends |
 | **Hosting** | Dokploy, Vercel, Static (GitHub Pages, Netlify) | Deployment scripts + Docker |
 | **Testing** | Vitest, Playwright, pytest, Go test | Framework-appropriate test setup |
 | **CSS** | Tailwind CSS + ClassMCP + Classpresso | ClassMCP (MCP) + Classpresso (post-build) auto-included in CSS profiles |
@@ -210,7 +308,7 @@ cp .claude/hooks/check-rulecatch.sh ~/.claude/hooks/
 3. Run `/diagram all` — Auto-generate architecture, API, database, and infrastructure diagrams
 4. Edit `CLAUDE.local.md` — Add your personal preferences
 
-The database wrapper (`src/core/db/index.ts`) works out of the box — just set `DATABASE_URL` in your `.env` and it connects to MongoDB automatically. Smart NoSQL injection sanitization runs on all inputs: standard MongoDB operators (`$gte`, `$in`, `$regex`, etc.) pass through safely while dangerous operators (`$where`, `$function`) are stripped. See the [Database Wrapper](#database-wrapper--production-mongodb) section for details.
+The database wrapper (`src/core/db/index.ts`) works out of the box — just set `STRICTDB_URI` in your `.env` and it connects to your database automatically. Built-in sanitization and guardrails run on all inputs: standard query operators pass through safely while dangerous operators are stripped. See the [Database Wrapper](#database-wrapper--strictdb) section for details.
 
 ### 4. Start Building
 
@@ -237,8 +335,8 @@ This is a scaffold template, not a runnable app. Use `/new-project my-app` to cr
 ### Database Connection Errors
 
 - Run `/setup` to configure your `.env` with a valid connection string
-- Check that `MONGODB_URI` (or `DATABASE_URL`) is set in `.env`
-- Verify your IP is whitelisted in MongoDB Atlas Network Access
+- Check that `STRICTDB_URI` is set in `.env`
+- Verify your IP is whitelisted in your database provider's network access settings
 
 ### `/install-global` Reports Conflicts
 
@@ -281,6 +379,7 @@ project/
 ├── .claude/
 │   ├── settings.json            # Hooks configuration
 │   ├── commands/
+│   │   ├── mdd.md               # /mdd — MDD workflow (build, audit, status)
 │   │   ├── help.md              # /help — list all commands, skills, and agents
 │   │   ├── quickstart.md        # /quickstart — interactive first-run walkthrough
 │   │   ├── review.md            # /review — code review
@@ -323,6 +422,9 @@ project/
 │       ├── verify-no-secrets.sh # Stop: check for secrets
 │       ├── check-rulecatch.sh   # Stop: report RuleCatch violations
 │       └── check-env-sync.sh    # Stop: warn on .env/.env.example drift
+├── .mdd/                            # MDD workflow directory (gitignored)
+│   ├── docs/                        # Feature documentation
+│   └── audits/                      # Audit notes, reports, results
 ├── project-docs/
 │   ├── ARCHITECTURE.md          # System overview (authoritative)
 │   ├── INFRASTRUCTURE.md        # Deployment details
@@ -442,7 +544,7 @@ Every API endpoint MUST use `/api/v1/` prefix. No exceptions.
 
 - NEVER create direct database connections outside `src/core/db/`
 - ALWAYS use the centralized database wrapper
-- Smart NoSQL injection sanitization: safe operators (`$gte`, `$in`, `$regex`) pass through, dangerous operators (`$where`, `$function`) are stripped
+- Built-in sanitization and guardrails: safe operators (`$gte`, `$in`, `$regex`) pass through, dangerous operators (`$where`, `$function`) are stripped
 - Use `{ trusted: true }` only for non-standard operators not in the allowlist (rare)
 - One connection pool. One place to change. One place to mock.
 
@@ -460,7 +562,7 @@ await page.goto('/dashboard');
 
 ### Rule 5: NEVER Hardcode Credentials
 
-ALWAYS use environment variables. NEVER put API keys, passwords, or tokens directly in code. NEVER hardcode connection strings — use `DATABASE_URL` from `.env`.
+ALWAYS use environment variables. NEVER put API keys, passwords, or tokens directly in code. NEVER hardcode connection strings — use `STRICTDB_URI` from `.env`.
 
 ### Rule 6: ALWAYS Ask Before Deploying
 
@@ -656,6 +758,16 @@ Hooks are wired up in `.claude/settings.json`:
 
 Invoke these with `/command` in any Claude Code session. Each command is a markdown file in `.claude/commands/` that gives Claude specific instructions and tool permissions.
 
+### `/mdd`
+
+The core MDD workflow command. Three modes in one:
+
+- **`/mdd <feature description>`** — Build mode. Interactive interview → documentation → test skeletons → named build plan → implementation → verification. Tests are generated before code. Claude presents a plan with time estimates and waits for approval.
+- **`/mdd audit [section]`** — Audit mode. Reads all source files, writes incremental notes (survives compaction), produces a severity-rated findings report, and fixes everything. Works on the whole project or a specific section.
+- **`/mdd status`** — Quick overview of feature docs, last audit date, test coverage, open findings, and quality gate violations.
+
+All artifacts are stored in `.mdd/` (docs in `.mdd/docs/`, audit reports in `.mdd/audits/`). See the [MDD Workflow](#mdd-workflow--manual-first-development--new) section above for full details and real results.
+
 ### `/help`
 
 Lists every command, skill, and agent in the starter kit, grouped by category: Getting Started, Project Scaffold, Code Quality, Development, Infrastructure, and Monitoring. Also shows skill triggers and agent descriptions. Run `/help` anytime to see what's available.
@@ -691,7 +803,7 @@ Reports exactly what was added, skipped, and merged. Your existing config is nev
 Interactive project configuration. Walks you through setting up your `.env` with real values:
 
 - **Multi-region** — US + EU with isolated databases, VPS, and Dokploy per region
-- **Database** — MongoDB/PostgreSQL per region (`MONGODB_URI_US`, `MONGODB_URI_EU`)
+- **Database** — MongoDB/PostgreSQL per region (`STRICTDB_URI_US`, `STRICTDB_URI_EU`)
 - **Deployment** — Dokploy on Hostinger VPS per region (IP, API key, app ID, webhook token)
 - **Docker** — Hub username, image name, region tagging (`:latest` for US, `:eu` for EU)
 - **GitHub** — username, SSH vs HTTPS
@@ -809,7 +921,7 @@ Updates an existing starter-kit project with the latest commands, hooks, skills,
 Add capabilities (MongoDB, Docker, testing, etc.) to an existing project after scaffolding. Idempotent — safely updates already-installed features to the latest version. Maintains a feature manifest (`.claude/features.json`) so `/update-project` can sync feature files too.
 
 ```bash
-/add-feature mongo            # Add MongoDB wrapper + query system
+/add-feature mongo            # Add StrictDB wrapper + query system (MongoDB backend)
 /add-feature vitest playwright # Add both test frameworks
 /add-feature --list           # Show all available features
 ```
@@ -827,7 +939,7 @@ Scaffolds a production-ready API endpoint with full CRUD:
 - **Route** — `src/routes/v1/<resource>.ts` (thin routes, proper HTTP status codes)
 - **Tests** — `tests/unit/<resource>.test.ts` (happy path, error cases, edge cases)
 
-Uses the db wrapper with shared pool, auto-sanitized inputs, pagination (max 100), registered indexes, and `/api/v1/` prefix. Pass `--no-mongo` to skip MongoDB integration.
+Uses the StrictDB wrapper with shared pool, auto-sanitized inputs, pagination (max 100), registered indexes, and `/api/v1/` prefix. Pass `--no-mongo` to skip database integration.
 
 ### `/refactor`
 
@@ -991,20 +1103,22 @@ expect(result).toBeTruthy();  // too vague
 
 ---
 
-## Database Wrapper — Production MongoDB
+## Database Wrapper — StrictDB
 
-The starter kit includes a **production-grade MongoDB wrapper** at `src/core/db/index.ts` using the native driver (no Mongoose, no ODMs). It enforces every best practice that prevents the most common database failures in AI-assisted development.
+The starter kit includes a **production-grade StrictDB wrapper** at `src/core/db/index.ts` using the unified driver (supports MongoDB, PostgreSQL, MySQL, MSSQL, SQLite, Elasticsearch). It enforces every best practice that prevents the most common database failures in AI-assisted development.
 
 ### The Absolute Rule
 
-**ALL database access goes through `src/core/db/index.ts`. No exceptions.** Never create `new MongoClient()` anywhere else. Never import `mongodb` directly in business logic.
+**ALL database access goes through `src/core/db/index.ts`. No exceptions.** Never create direct database connections anywhere else. Never import database drivers directly in business logic.
 
 ```typescript
-// CORRECT — import from the centralized wrapper
+// CORRECT — import from the StrictDB wrapper
 import { queryOne, insertOne, updateOne } from '@/core/db/index.js';
 
 // WRONG — NEVER do this
-import { MongoClient } from 'mongodb';  // FORBIDDEN outside src/core/db/
+import { StrictDB } from 'strictdb';       // FORBIDDEN outside src/core/db/
+import { MongoClient } from 'mongodb';     // FORBIDDEN outside src/core/db/
+import { Pool } from 'pg';                 // FORBIDDEN outside src/core/db/
 ```
 
 ### Reading Data — Aggregation Only
@@ -1055,9 +1169,9 @@ await bulkOps('sessions', [
 | `standard` | 10 | 2 | Default for most services |
 | `low` | 5 | 1 | Background workers, cron jobs |
 
-### Smart NoSQL Injection Sanitization
+### Built-in Sanitization and Guardrails
 
-All query inputs are automatically sanitized to prevent NoSQL injection. The sanitizer uses an **allowlist** of known-safe MongoDB query operators — standard operators pass through while dangerous ones are stripped.
+All query inputs are automatically sanitized to prevent injection attacks. The sanitizer uses an **allowlist** of known-safe query operators — standard operators pass through while dangerous ones are stripped.
 
 **How it works:**
 
@@ -1086,11 +1200,11 @@ const latest = await queryOne('events', {
 // { $function: { body: '...' } } → stripped (JS execution)
 ```
 
-**Disable entirely:** Set `DB_SANITIZE_INPUTS=false` in `.env` or `sanitize = false` in `claude-mastery-project.conf`.
+**Disable entirely:** Set `sanitize: false` in `StrictDB.create()` config or `sanitize = false` in `claude-mastery-project.conf`.
 
 ### `{ trusted: true }` — Escape Hatch
 
-If you need an operator not in the allowlist, `queryOne()`, `queryMany()`, and `count()` accept `{ trusted: true }` to skip sanitization entirely. This should be **rare** — if you find yourself using it frequently, add the operator to `SAFE_MONGO_OPERATORS` in `src/core/db/index.ts` instead.
+If you need an operator not in the allowlist, `queryOne()`, `queryMany()`, and `count()` accept `{ trusted: true }` to skip sanitization entirely. This should be **rare** — if you find yourself using it frequently, add the operator to `SAFE_OPERATORS` in `src/core/db/index.ts` instead.
 
 ```typescript
 const results = await queryMany('collection', pipeline, { trusted: true });
@@ -1103,7 +1217,7 @@ const one = await queryOne('collection', match, { trusted: true });
 - You have validated/sanitized the input yourself at a higher layer
 
 **When NOT to use it:**
-- Standard MongoDB operators (`$gte`, `$in`, `$regex`, etc.) — these work by default
+- Standard query operators (`$gte`, `$in`, `$regex`, etc.) — these work by default
 - Raw user input flows directly into `$match` values without validation
 
 ### Additional Features
@@ -1342,7 +1456,7 @@ Every plan step MUST have a unique, descriptive name:
 
 ```
 Step 1 (Project Setup): Initialize repo with TypeScript
-Step 2 (Database Layer): Create MongoDB wrapper
+Step 2 (Database Layer): Create StrictDB wrapper
 Step 3 (Auth System): Implement JWT authentication
 ```
 
@@ -1423,7 +1537,7 @@ This is the free preview that lets you see what you've been missing. Once you se
 | **[Dashboard](https://rulecatch.ai?utm_source=github-pages&utm_medium=article&utm_campaign=rulecatch&utm_content=tutorial)** | Violations across 18 rule categories, session analytics (tokens, cost, lines/hour), trend reports, and per-file attribution. Alerts via Slack, Discord, PagerDuty, and more |
 | **[MCP Server](https://www.npmjs.com/package/@rulecatch/mcp-server)** | Gives Claude direct read access to violation data. Ask: *"Show all security violations this week"* or *"Create a plan to fix today's violations"* — Claude reviews, analyzes, and generates file-by-file fix plans without leaving your session |
 
-- **200+ pre-built rules** across security, TypeScript, React, Next.js, MongoDB, Docker, and more — violations detected in under 100ms
+- **200+ pre-built rules** across security, TypeScript, React, Next.js, StrictDB, Docker, and more — violations detected in under 100ms
 - **Privacy-first** — AES-256-GCM client-side encryption. You hold the key — RuleCatch never sees your plaintext data. US and EU data isolation, fully GDPR compliant
 
 **Full setup (with API key):**

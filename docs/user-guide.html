@@ -347,7 +347,7 @@
           </div>
           <div class="command-card">
             <h3><code>/add-feature &lt;name&gt;</code></h3>
-            <p class="command-desc">Add capabilities (MongoDB, Docker, testing, etc.) to an existing project after scaffolding. Idempotent &mdash; safely updates already-installed features. Maintains a feature manifest so <code>/update-project</code> can sync feature files too.</p>
+            <p class="command-desc">Add capabilities (StrictDB, Docker, testing, etc.) to an existing project after scaffolding. Idempotent &mdash; safely updates already-installed features. Maintains a feature manifest so <code>/update-project</code> can sync feature files too.</p>
           </div>
         </div>
 
@@ -495,58 +495,66 @@ exit 0  # Allow</code></pre>
       <section id="database-wrapper">
         <h2>Part 5: Database Wrapper</h2>
 
-        <h3>Why the Wrapper Exists</h3>
+        <h3>Why StrictDB Exists</h3>
         <div class="callout" style="background: var(--bg-secondary); border-left: 4px solid var(--accent-cyan); padding: 1rem 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
-          The #1 database failure in AI-assisted development is <strong>connection pool exhaustion</strong>. Without a centralized wrapper, Claude creates <code>new MongoClient()</code> in every file. Each client opens its own pool. During hot reload, connections multiply until the database rejects new connections.
+          The #1 database failure in AI-assisted development is <strong>connection pool exhaustion</strong>. Without StrictDB, Claude creates direct database clients in every file. Each client opens its own pool. During hot reload, connections multiply until the database rejects new connections.
         </div>
 
-        <h3>MongoDB: Reading Data</h3>
+        <h3>Reading Data</h3>
         <pre class="language-typescript"><code class="language-typescript">import { queryOne, queryMany, queryWithLookup, count } from '@/core/db/index.js';
 
-// Single document
+// Single document (works with MongoDB, PostgreSQL, SQLite, etc.)
 const user = await queryOne&lt;User&gt;('users', { email: 'test@example.com' });
 
-// Pipeline query
-const recentOrders = await queryMany&lt;Order&gt;('orders', [
-  { $match: { userId, status: 'active' } },
-  { $sort: { createdAt: -1 } },
-  { $limit: 20 },
-]);
+// Filtered query with options (filter, then options object)
+const recentOrders = await queryMany&lt;Order&gt;('orders',
+  { userId, status: 'active' },
+  { sort: { createdAt: -1 }, limit: 20 },
+);
 
-// Join — $limit enforced BEFORE $lookup automatically
+// Join across collections/tables
 const userWithOrders = await queryWithLookup&lt;UserWithOrders&gt;('users', {
   match: { _id: userId },
   lookup: { from: 'orders', localField: '_id', foreignField: 'userId', as: 'orders' },
-});</code></pre>
+  unwind: 'orders',
+});
 
-        <h3>MongoDB: Writing Data</h3>
-        <pre class="language-typescript"><code class="language-typescript">import { insertOne, updateOne, bulkOps, deleteOne } from '@/core/db/index.js';
+// Count
+const total = await count('users', { role: 'admin' });</code></pre>
+
+        <h3>Writing Data</h3>
+        <pre class="language-typescript"><code class="language-typescript">import { insertOne, insertMany, updateOne, batch, deleteOne } from '@/core/db/index.js';
 
 await insertOne('users', { email, name, createdAt: new Date() });
+await insertMany('events', batchOfEvents);
 
 // Use $inc for counters — NEVER read-modify-write
 await updateOne&lt;Stats&gt;('stats', { date }, { $inc: { pageViews: 1 } }, true);
 
-// Batch operations (auto-retries E11000 concurrent races)
-await bulkOps('sessions', [
-  { updateOne: { filter: { sessionId }, update: { $inc: { events: 1 } }, upsert: true } },
-]);</code></pre>
+// Batch operations (array of typed operations)
+await batch([
+  { operation: 'updateOne', collection: 'sessions', filter: { sessionId }, update: { $inc: { events: 1 } } },
+  { operation: 'deleteOne', collection: 'tokens', filter: { token: expiredToken } },
+]);
 
-        <h3>SQL Wrapper</h3>
-        <pre class="language-typescript"><code class="language-typescript">import { queryOne, queryMany, withTransaction } from '@/core/db/sql.js';
+await deleteOne('tokens', { token: expiredToken });</code></pre>
 
-// ALWAYS use parameterized queries
-const user = await queryOne&lt;User&gt;('SELECT * FROM users WHERE id = $1', [userId]);
+        <h3>AI-First Discovery</h3>
+        <pre class="language-typescript"><code class="language-typescript">import { describe, validate, explain } from '@/core/db/index.js';
 
-// Transactions
-await withTransaction(async (client) =&gt; {
-  await client.query('UPDATE accounts SET balance = balance - $1 WHERE id = $2', [100, fromId]);
-  await client.query('UPDATE accounts SET balance = balance + $1 WHERE id = $2', [100, toId]);
-});</code></pre>
+// Discover schema — fields, indexes, document count
+const schema = await describe('users');
+
+// Dry-run validation — catches errors before execution
+const check = await validate('users', { doc: { email: 'test@test.com' } });
+
+// See the native query that would run
+const plan = await explain('users', { filter: { role: 'admin' }, limit: 50 });</code></pre>
 
         <h3>Graceful Shutdown</h3>
         <pre class="language-typescript"><code class="language-typescript">import { gracefulShutdown } from '@/core/db/index.js';
 
+// Closes all database connections (MongoDB, PostgreSQL, SQLite, etc.)
 process.on('SIGTERM', () =&gt; gracefulShutdown(0));
 process.on('SIGINT', () =&gt; gracefulShutdown(0));
 process.on('uncaughtException', (err) =&gt; {
@@ -744,11 +752,11 @@ CMD ["node", "dist/index.js"]</code></pre>
           </div>
           <div class="troubleshooting-item">
             <h4>Database connection timeout</h4>
-            <p>Verify <code>MONGODB_URI</code> in <code>.env</code>. Whitelist your IP in MongoDB Atlas. Test with <code>mongosh</code>.</p>
+            <p>Verify <code>STRICTDB_URI</code> in <code>.env</code>. For MongoDB Atlas, whitelist your IP. For PostgreSQL, check <code>pg_hba.conf</code>. Test connectivity with your database's CLI tool.</p>
           </div>
           <div class="troubleshooting-item">
             <h4>Too many open connections</h4>
-            <p>You're creating <code>new MongoClient()</code> outside the wrapper. Always import from <code>@/core/db/index.js</code>.</p>
+            <p>You're creating direct database clients outside StrictDB. Always import from <code>@/core/db/index.js</code>.</p>
           </div>
           <div class="troubleshooting-item">
             <h4>"BLOCKED: You're on main"</h4>
@@ -788,7 +796,7 @@ CMD ["node", "dist/index.js"]</code></pre>
           </div>
           <div class="troubleshooting-item">
             <h4>Connection works locally, fails in Docker</h4>
-            <p>Container can't reach <code>localhost</code>. Use the actual MongoDB Atlas URI and pass via env vars.</p>
+            <p>Container can't reach <code>localhost</code>. Use the actual database URI (e.g., MongoDB Atlas, remote PostgreSQL) and pass via <code>STRICTDB_URI</code> env var.</p>
           </div>
           <div class="troubleshooting-item">
             <h4>"pnpm: command not found"</h4>
@@ -832,11 +840,11 @@ CMD ["node", "dist/index.js"]</code></pre>
           </div>
           <div class="command-card">
             <h3>Can I use Prisma or Mongoose?</h3>
-            <p class="command-desc">The starter kit recommends the native driver through the wrapper. For <code>clean</code> profile projects, use any ORM you prefer.</p>
+            <p class="command-desc">The starter kit recommends StrictDB as the centralized database layer. For <code>clean</code> profile projects, use any ORM you prefer.</p>
           </div>
           <div class="command-card">
             <h3>How do I switch from MongoDB to PostgreSQL?</h3>
-            <p class="command-desc">Use the SQL wrapper at <code>src/core/db/sql.ts</code>. Set <code>DATABASE_URL=postgresql://...</code> in <code>.env</code>.</p>
+            <p class="command-desc">StrictDB handles all backends. Set <code>STRICTDB_URI=postgresql://...</code> in <code>.env</code> &mdash; StrictDB auto-detects the driver from the URI scheme.</p>
           </div>
           <div class="command-card">
             <h3>Why 3 assertions minimum?</h3>

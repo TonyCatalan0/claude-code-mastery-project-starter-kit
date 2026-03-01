@@ -390,13 +390,12 @@ Go Mode scaffolds a Go project with standard layout conventions (`cmd/`, `intern
 
 #### Question G3.1: MongoDB Connection String (only if MongoDB selected in G3)
 "Do you want to configure your MongoDB connection now?"
-- **Yes, I have a connection string** — User pastes their full `mongodb+srv://...` URI. Write it to `.env` as `MONGODB_URI=<their-value>` and set `MONGO_DB_NAME` from the URI path segment.
-- **No, I'll set it up later** — Skip. Leave `MONGODB_URI` placeholder in `.env.example` only.
+- **Yes, I have a connection string** — User pastes their full `mongodb+srv://...` URI. Write it to `.env` as `STRICTDB_URI=<their-value>`.
+- **No, I'll set it up later** — Skip. Leave `STRICTDB_URI` placeholder in `.env.example` only.
 
 If the user provides a connection string:
-1. Write `MONGODB_URI=<value>` to the project's `.env`
-2. Extract the database name from the URI path (e.g., `mongodb+srv://user:pass@cluster/mydb` → `MONGO_DB_NAME=mydb`)
-3. If no database name in URI, ask: "What should the database be called?" and append it to the URI
+1. Write `STRICTDB_URI=<value>` to the project's `.env`
+2. If no database name in URI, ask: "What should the database be called?" and append it to the URI
 
 #### Question G4: Hosting / Deployment
 "Where will this be deployed?" (same as Node.js options)
@@ -848,13 +847,12 @@ Python Mode scaffolds a Python project with modern tooling: type hints, async su
 
 #### Question P3.1: MongoDB Connection String (only if MongoDB selected in P3)
 "Do you want to configure your MongoDB connection now?"
-- **Yes, I have a connection string** — User pastes their full `mongodb+srv://...` or `mongodb://...` URI. Write it to `.env` as `MONGODB_URI=<their-value>` and set `MONGO_DB_NAME` from the URI path segment.
-- **No, I'll set it up later** — Skip. Leave `MONGODB_URI` placeholder in `.env.example` only.
+- **Yes, I have a connection string** — User pastes their full `mongodb+srv://...` or `mongodb://...` URI. Write it to `.env` as `STRICTDB_URI=<their-value>`.
+- **No, I'll set it up later** — Skip. Leave `STRICTDB_URI` placeholder in `.env.example` only.
 
 If the user provides a connection string:
-1. Write `MONGODB_URI=<value>` to the project's `.env`
-2. Extract the database name from the URI path (e.g., `mongodb+srv://user:pass@cluster/mydb` → `MONGO_DB_NAME=mydb`)
-3. If no database name in URI, ask: "What should the database be called?" and append it to the URI
+1. Write `STRICTDB_URI=<value>` to the project's `.env`
+2. If no database name in URI, ask: "What should the database be called?" and append it to the URI
 
 #### Question P4: Package Manager
 "Which package manager?"
@@ -1343,13 +1341,12 @@ If they chose Vite + React and want SSR, switch to **Next.js (App Router)** or a
 
 ### Question 7: MongoDB Connection String (only if `mongo` database selected)
 "Do you want to configure your MongoDB connection now?"
-- **Yes, I have a connection string** — User pastes their full `mongodb+srv://...` or `mongodb://...` URI. Write it to `.env` as `MONGODB_URI=<their-value>` and set `MONGO_DB_NAME` from the URI path segment.
-- **No, I'll set it up later** — Skip. Leave `MONGODB_URI` placeholder in `.env.example` only.
+- **Yes, I have a connection string** — User pastes their full `mongodb+srv://...` or `mongodb://...` URI. Write it to `.env` as `STRICTDB_URI=<their-value>`.
+- **No, I'll set it up later** — Skip. Leave `STRICTDB_URI` placeholder in `.env.example` only.
 
 If the user provides a connection string:
-1. Write `MONGODB_URI=<value>` to the project's `.env`
-2. Extract the database name from the URI path (e.g., `mongodb+srv://user:pass@cluster/mydb` → `MONGO_DB_NAME=mydb`)
-3. If no database name in URI, ask: "What should the database be called?" and append it to the URI
+1. Write `STRICTDB_URI=<value>` to the project's `.env`
+2. If no database name in URI, ask: "What should the database be called?" and append it to the URI
 
 ## Step 2 — Create the Project
 
@@ -1367,7 +1364,7 @@ The script handles ALL of the following in one execution with progress indicator
 - Creates all directories (src/, .claude/, project-docs/, tests/, scripts/, .github/)
 - Copies 16 project-scoped commands, 2 skills, 2 agents, all 9 hooks
 - Writes settings.json (full 9-hook config)
-- Copies MongoDB wrapper (src/core/db/index.ts) + query system
+- Copies StrictDB wrapper (src/core/db/index.ts) + query system
 - Creates Next.js app structure (layout, page, API health route, instrumentation)
 - Creates TypeScript, Next.js, Tailwind, PostCSS, Vitest, Playwright configs
 - Creates package.json with all deps/scripts
@@ -1422,54 +1419,55 @@ project/
 │   ├── skills/
 │   └── agents/
 └── scripts/
-    ├── db-query.ts          # (MongoDB only) Test Query Master
-    └── queries/             # (MongoDB only) Individual dev/test query files
+    ├── db-query.ts          # (StrictDB/MongoDB only) Test Query Master
+    └── queries/             # (StrictDB/MongoDB only) Individual dev/test query files
 ```
 
 ## SQL Database Setup (projects with `postgres`, `mysql`, `mssql`, or `sqlite` database)
 
-When the project uses a SQL database (PostgreSQL, MySQL, MSSQL, or SQLite), scaffold the SQL wrapper:
+When the project uses a SQL database (PostgreSQL, MySQL, MSSQL, or SQLite), StrictDB handles the connection via `STRICTDB_URI`:
 
-1. Copy `src/core/db/sql.ts` from the starter kit into the new project
-2. Install the appropriate driver based on database choice:
+1. Copy `src/core/db/index.ts` (StrictDB wrapper) from the starter kit into the new project
+2. Install StrictDB and the appropriate driver based on database choice:
+   - All databases: `npm install strictdb@^0.1.0`
    - PostgreSQL: `npm install pg @types/pg`
    - MySQL: `npm install mysql2`
    - MSSQL: `npm install mssql`
    - SQLite: `npm install better-sqlite3 @types/better-sqlite3`
-3. Set `DATABASE_URL` in `.env.example` with placeholder
-4. Add SQL wrapper rules to the project's CLAUDE.md
+3. Set `STRICTDB_URI` in `.env.example` with placeholder
+4. Add StrictDB wrapper rules to the project's CLAUDE.md
 
 **The rule that MUST be in every SQL project's CLAUDE.md:**
 
-> ALL SQL database access goes through `src/core/db/sql.ts`. No exceptions.
+> ALL SQL database access goes through `src/core/db/index.ts` (StrictDB wrapper). No exceptions.
 > NEVER create connection pools anywhere else.
 > NEVER import database drivers directly outside the wrapper.
 > ALWAYS use parameterized queries — NEVER string-interpolate values into SQL.
 
-**DATABASE_URL examples for .env.example:**
+**STRICTDB_URI examples for .env.example:**
 ```bash
 # PostgreSQL
-DATABASE_URL=postgresql://user:password@localhost:5432/mydb
+STRICTDB_URI=postgresql://user:password@localhost:5432/mydb
 
 # MySQL
-DATABASE_URL=mysql://user:password@localhost:3306/mydb
+STRICTDB_URI=mysql://user:password@localhost:3306/mydb
 
 # MSSQL
-DATABASE_URL=mssql://user:password@localhost:1433/mydb
+STRICTDB_URI=mssql://user:password@localhost:1433/mydb
 
 # SQLite
-DATABASE_URL=file:./data/app.db
+STRICTDB_URI=file:./data/app.db
 ```
 
 ## MongoDB Test Query System (projects with `mongo` database)
 
-When the project uses MongoDB, ALWAYS scaffold the db-query system:
+When the project uses MongoDB (via StrictDB), ALWAYS scaffold the db-query system:
 
 1. Create `scripts/db-query.ts` — the master index/CLI runner
 2. Create `scripts/queries/` directory for individual query files
 3. Add the db-query rules to the project's `CLAUDE.md`
 
-**The rule that MUST be in every MongoDB project's CLAUDE.md:**
+**The rule that MUST be in every StrictDB/MongoDB project's CLAUDE.md:**
 
 > ALL ad-hoc / test / dev database queries go through `scripts/db-query.ts`.
 > When asked to look something up in the database:
@@ -1565,10 +1563,10 @@ export default defineConfig({
 
 ## Node.js Entry Point Requirements
 
-Add to EVERY Node.js entry point. If the project uses MongoDB, use `gracefulShutdown` to close pools before exit:
+Add to EVERY Node.js entry point. If the project uses StrictDB, use `gracefulShutdown` to close pools before exit:
 
 ```typescript
-// WITH MongoDB (projects using src/core/db/)
+// WITH StrictDB (projects using src/core/db/)
 import { gracefulShutdown } from '@/core/db/index.js';
 
 process.on('SIGTERM', () => gracefulShutdown(0));
@@ -1584,7 +1582,7 @@ process.on('unhandledRejection', (reason) => {
 ```
 
 ```typescript
-// WITHOUT MongoDB (no database or non-Mongo projects)
+// WITHOUT StrictDB (no database projects)
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection:', reason);
   process.exit(1);
@@ -1983,7 +1981,7 @@ DOKPLOY_APP_ID_EU=your_eu_app_id
 
 **CRITICAL multi-region rules (add to CLAUDE.md):**
 - US containers NEVER connect to EU databases, and vice versa
-- Each container gets region-specific `MONGODB_URI` or `DATABASE_URL`
+- Each container gets region-specific `STRICTDB_URI` (e.g., `STRICTDB_URI_US`, `STRICTDB_URI_EU`)
 - `DEPLOY_REGION` env var must match the VPS region
 - When pushing images: push `:latest` for US, push `:eu` tag for EU
 - ALWAYS deploy to both regions — never leave them out of sync
@@ -2182,7 +2180,7 @@ When scaffolding the starter kit itself, create `claude-mastery-project.conf` wi
 | Scaffolding Choice | Feature Name | Files to List |
 |-------------------|-------------|---------------|
 | `database = mongo` | `mongo` | `src/core/db/index.ts`, `scripts/db-query.ts`, `scripts/queries/example-find-user.ts`, `scripts/queries/example-count-docs.ts` |
-| `database = postgres\|mysql\|mssql\|sqlite` | `postgres` | `src/core/db/sql.ts` |
+| `database = postgres\|mysql\|mssql\|sqlite` | `postgres` | `src/core/db/index.ts` |
 | Vitest installed | `vitest` | `vitest.config.ts` |
 | Playwright installed | `playwright` | `playwright.config.ts` |
 | Docker selected | `docker` | `Dockerfile` |
@@ -2210,7 +2208,7 @@ Write to `$PROJECT_PATH/.claude/features.json`.
 
 **For Clean mode:** The scaffold-clean.sh script already creates an empty manifest (`"features": {}`). No additional action needed.
 
-**For Go/Python modes:** Map the same features (e.g., Go with MongoDB → `mongo` feature with `internal/database/mongo.go` in files).
+**For Go/Python modes:** Map the same features (e.g., Go with MongoDB via StrictDB → `mongo` feature with `internal/database/mongo.go` in files).
 
 ---
 
@@ -2225,7 +2223,7 @@ After creation, verify and report:
 - [ ] .dockerignore exists
 - [ ] CLAUDE.md has all required sections (overview, stack, commands, ports)
 - [ ] package.json has ALL required scripts (dev, build, test, test:e2e, test:kill-ports)
-- [ ] Error handlers in entry point (gracefulShutdown for MongoDB projects)
+- [ ] Error handlers in entry point (gracefulShutdown for StrictDB projects)
 - [ ] TypeScript strict mode enabled
 
 **Testing:**
@@ -2247,8 +2245,8 @@ After creation, verify and report:
 - [ ] scripts/deploy.sh created (Dokploy projects)
 - [ ] Multi-region deploy script (if multiregion selected)
 
-**Database (MongoDB projects):**
-- [ ] src/core/db/index.ts — MongoDB wrapper
+**Database (StrictDB projects):**
+- [ ] src/core/db/index.ts — StrictDB wrapper
 - [ ] scripts/db-query.ts — Test Query Master
 - [ ] scripts/queries/ directory
 - [ ] db-query rules in CLAUDE.md

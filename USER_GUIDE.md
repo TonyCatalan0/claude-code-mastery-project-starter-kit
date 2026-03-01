@@ -12,7 +12,7 @@
 - [Part 2: Daily Workflow](#part-2-daily-workflow)
 - [Part 3: Commands Deep Dive](#part-3-commands-deep-dive)
 - [Part 4: Hook System Explained](#part-4-hook-system-explained)
-- [Part 5: Database Wrapper](#part-5-database-wrapper)
+- [Part 5: StrictDB Database Layer](#part-5-strictdb-database-layer)
 - [Part 6: CLAUDE.md Customization](#part-6-claudemd-customization)
 - [Part 7: Testing](#part-7-testing)
 - [Part 8: Deployment](#part-8-deployment)
@@ -79,7 +79,7 @@ This merges security rules and hooks into `~/.claude/`. It never overwrites your
 
 This creates `~/projects/my-app` with all Claude Code tooling — commands, hooks, skills, agents, documentation templates — and zero coding opinions. You pick the language, framework, and database yourself.
 
-For a fully opinionated setup (Next.js + TypeScript + MongoDB + Tailwind):
+For a fully opinionated setup (Next.js + TypeScript + StrictDB + Tailwind):
 
 ```bash
 /new-project my-app default
@@ -134,7 +134,7 @@ my-app/
 └── .dockerignore       ← Keeps secrets out of images
 ```
 
-The `default` profile adds more: `src/core/db/index.ts` (database wrapper), `package.json`, `tsconfig.json`, `playwright.config.ts`, `vitest.config.ts`, and framework-specific files.
+The `default` profile adds more: `src/core/db/index.ts` (StrictDB database layer), `package.json`, `tsconfig.json`, `playwright.config.ts`, `vitest.config.ts`, and framework-specific files.
 
 ---
 
@@ -247,7 +247,7 @@ Uses smart merge — if you already have config, it adds missing sections withou
 
 Interactive `.env` configuration. Walks through:
 
-- Database (MongoDB/PostgreSQL, connection strings)
+- Database (StrictDB connection URI)
 - GitHub (username, SSH vs HTTPS)
 - Docker (Hub username, image name)
 - Analytics (Rybbit site ID)
@@ -332,9 +332,9 @@ Full project scaffolding with profiles:
 
 ```bash
 /new-project my-app clean              # AI tooling only, zero opinions
-/new-project my-app default            # Full stack: Next.js + MongoDB + Tailwind
+/new-project my-app default            # Full stack: Next.js + StrictDB + Tailwind
 /new-project my-api api fastify        # API only with Fastify
-/new-project my-api go                 # Go API with Gin + MongoDB
+/new-project my-api go                 # Go API with Gin + StrictDB
 /new-project my-api go chi postgres    # Go with Chi + PostgreSQL
 /new-project my-app vue                # Vue 3 SPA with Tailwind
 /new-project my-app nuxt               # Nuxt full-stack
@@ -354,11 +354,11 @@ Scaffolds a production-ready API endpoint:
 - **Route** — `src/routes/v1/<resource>.ts`
 - **Tests** — `tests/unit/<resource>.test.ts`
 
-Uses the db wrapper, auto-sanitized inputs, pagination, registered indexes, and `/api/v1/` prefix.
+Uses StrictDB, pagination, registered indexes, and `/api/v1/` prefix.
 
 ```bash
 /create-api users           # Full CRUD for users
-/create-api orders --no-mongo  # Skip MongoDB integration
+/create-api orders --no-db     # Skip database integration
 ```
 
 #### `/create-e2e <feature>`
@@ -690,34 +690,33 @@ Then wire it up in `.claude/settings.json`:
 
 ---
 
-## Part 5: Database Wrapper
+## Part 5: StrictDB Database Layer
 
-### Why the Wrapper Exists
+### Why StrictDB Exists
 
-The #1 database failure in AI-assisted development is **connection pool exhaustion**. Without a centralized wrapper, Claude creates `new MongoClient()` in every file that needs database access. Each client opens its own connection pool. During development with hot reload, connections multiply until the database rejects new connections.
+The #1 database failure in AI-assisted development is **connection pool exhaustion**. Without a centralized layer, Claude creates new database clients in every file that needs database access. Each client opens its own connection pool. During development with hot reload, connections multiply until the database rejects new connections.
 
-The wrapper solves this with a **singleton pattern** — one pool per URI, shared across the entire application.
+StrictDB solves this with a **singleton pattern** — one pool per URI, shared across the entire application. It provides a unified API across database engines (MongoDB, PostgreSQL, MySQL, SQLite) so you write the same `queryOne`, `queryMany`, `insertOne` calls regardless of backend.
 
-### MongoDB Wrapper Cookbook
+### Database Cookbook
 
-All database access goes through `src/core/db/index.ts`. No exceptions.
+All database access goes through `src/core/db/index.ts`. No exceptions. Set `STRICTDB_URI` in your `.env` to point at any supported database engine.
 
 #### Reading Data
 
 ```typescript
-import { queryOne, queryMany, queryWithLookup, count } from '@/core/db/index.js';
+import { queryOne, queryMany, count } from '@/core/db/index.js';
 
-// Single document lookup
+// Single document/row lookup
 const user = await queryOne<User>('users', { email: 'test@example.com' });
 
-// Multiple documents with pipeline
-const recentOrders = await queryMany<Order>('orders', [
-  { $match: { userId, status: 'active' } },
-  { $sort: { createdAt: -1 } },
-  { $limit: 20 },
-]);
+// Multiple documents/rows with sort and limit
+const recentOrders = await queryMany<Order>('orders',
+  { userId, status: 'active' },
+  { sort: { createdAt: -1 }, limit: 20 }
+);
 
-// Join with lookup ($limit enforced before $lookup automatically)
+// Join with lookup (limit enforced before lookup automatically)
 const userWithOrders = await queryWithLookup<UserWithOrders>('users', {
   match: { _id: userId },
   lookup: { from: 'orders', localField: '_id', foreignField: 'userId', as: 'orders' },
@@ -730,19 +729,25 @@ const totalAdmins = await count('users', { role: 'admin' });
 
 #### Writing Data
 
-```typescript
-import { insertOne, insertMany, updateOne, bulkOps, deleteOne } from '@/core/db/index.js';
+Every write returns an `OperationReceipt` with `{ acknowledged, matchedCount, modifiedCount, insertedId }` so you can verify the operation succeeded.
 
-// Insert
-await insertOne('users', { email, name, createdAt: new Date() });
+```typescript
+import { insertOne, insertMany, updateOne, batch, deleteOne } from '@/core/db/index.js';
+
+// Insert — returns OperationReceipt with insertedId
+const receipt = await insertOne('users', { email, name, createdAt: new Date() });
+console.log(receipt.insertedId);
+
 await insertMany('events', batchOfEvents);
 
 // Update — use $inc for counters (never read-modify-write)
-await updateOne<User>('users', { _id: userId }, { $set: { name: 'New Name' } });
+const updateReceipt = await updateOne<User>('users', { _id: userId }, { $set: { name: 'New Name' } });
+console.log(updateReceipt.modifiedCount); // 1
+
 await updateOne<Stats>('stats', { date }, { $inc: { pageViews: 1 } }, true); // upsert
 
-// Batch operations (auto-retries E11000 concurrent races)
-await bulkOps('sessions', [
+// Batch operations (auto-retries concurrent races)
+await batch('sessions', [
   { updateOne: { filter: { sessionId }, update: { $inc: { events: 1 } }, upsert: true } },
   { updateOne: { filter: { sessionId }, update: { $set: { lastSeen: new Date() } } } },
 ]);
@@ -756,6 +761,7 @@ await deleteOne('tokens', { token: expiredToken });
 ```typescript
 import { connect } from '@/core/db/index.js';
 
+// StrictDB manages pools per URI — choose a preset based on workload
 await connect(undefined, { pool: 'high', label: 'API' });      // 20 connections
 await connect(undefined, { pool: 'standard', label: 'Web' });   // 10 connections
 await connect(undefined, { pool: 'low', label: 'Worker' });     // 5 connections
@@ -775,37 +781,7 @@ registerIndex({ collection: 'tokens', fields: { expiresAt: 1 }, expireAfterSecon
 await ensureIndexes();
 ```
 
-MongoDB skips indexes that already exist, so `ensureIndexes()` is safe to call every startup.
-
-### SQL Wrapper Cookbook
-
-For PostgreSQL/MySQL/MSSQL/SQLite, the SQL wrapper lives at `src/core/db/sql.ts`.
-
-```typescript
-import { queryOne, queryMany, insertOne, withTransaction } from '@/core/db/sql.js';
-
-// Read — ALWAYS parameterize
-const user = await queryOne<User>('SELECT * FROM users WHERE id = $1', [userId]);
-const orders = await queryMany<Order>(
-  'SELECT * FROM orders WHERE user_id = $1 AND status = $2 LIMIT $3',
-  [userId, 'active', 20]
-);
-
-// Write
-await insertOne('users', { email, name, created_at: new Date() });
-
-// Transactions
-await withTransaction(async (client) => {
-  await client.query('UPDATE accounts SET balance = balance - $1 WHERE id = $2', [100, fromId]);
-  await client.query('UPDATE accounts SET balance = balance + $1 WHERE id = $2', [100, toId]);
-});
-```
-
-The wrapper auto-detects the driver from `DATABASE_URL`:
-- `postgresql://` or `postgres://` → pg
-- `mysql://` → mysql2
-- `mssql://` → mssql
-- `file:` or `sqlite:` → better-sqlite3
+StrictDB skips indexes that already exist, so `ensureIndexes()` is safe to call every startup.
 
 ### The db-query System
 
@@ -827,11 +803,10 @@ export default {
   description: 'Find sessions that expired in the last 24 hours',
   async run(args: string[]): Promise<void> {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const sessions = await queryMany('sessions', [
-      { $match: { expiresAt: { $lt: cutoff } } },
-      { $sort: { expiresAt: -1 } },
-      { $limit: 50 },
-    ]);
+    const sessions = await queryMany('sessions',
+      { expiresAt: { $lt: cutoff } },
+      { sort: { expiresAt: -1 }, limit: 50 }
+    );
     console.log(`Found ${sessions.length} expired sessions`);
   },
 };
@@ -860,7 +835,7 @@ process.on('unhandledRejection', (reason) => {
 });
 ```
 
-`gracefulShutdown()` is idempotent — safe to call from multiple signals.
+`gracefulShutdown()` is idempotent — safe to call from multiple signals. It closes all database connections managed by StrictDB before exiting.
 
 ---
 
@@ -1101,19 +1076,19 @@ pnpm test:kill-ports
 
 ### Database Connection Issues
 
-**"MongoServerSelectionError: connection timed out"**
-- Check `MONGODB_URI` in `.env` — is the connection string correct?
-- Whitelist your IP in MongoDB Atlas Network Access
-- Try connecting with `mongosh` to verify the URI works
+**"Connection timed out" or "ServerSelectionError"**
+- Check `STRICTDB_URI` in `.env` — is the connection string correct?
+- For cloud-hosted databases, whitelist your IP in the provider's Network Access settings
+- Try connecting with a database CLI tool to verify the URI works
 
 **"Too many open connections"**
-- You're probably creating `new MongoClient()` outside the wrapper — don't
+- You're probably creating database clients outside StrictDB — don't
 - Always use `import { queryOne, insertOne } from '@/core/db/index.js'`
-- Check for hot-reload connection leaks — the wrapper handles this with `globalThis`
+- Check for hot-reload connection leaks — StrictDB handles this with `globalThis`
 
 **Connection works locally but fails in Docker**
-- The container can't reach `localhost` — use the actual MongoDB Atlas URI
-- Check if `MONGODB_URI` is being passed to the container via env vars
+- The container can't reach `localhost` — use the actual database host URI
+- Check if `STRICTDB_URI` is being passed to the container via env vars
 
 ### Git / Branch Issues
 
@@ -1204,14 +1179,14 @@ A: Run `/update-project` to pull the latest commands, hooks, skills, and rules i
 
 ### Database
 
-**Q: Can I use Prisma or Mongoose?**
-A: The starter kit recommends the native MongoDB driver through the wrapper for AI-assisted development (simpler mental model, fewer abstractions). But for `clean` profile projects, you can use any ORM or ODM you prefer.
+**Q: Can I use Prisma or Mongoose instead of StrictDB?**
+A: StrictDB is recommended for AI-assisted development because it provides a simpler mental model with fewer abstractions. But for `clean` profile projects, you can use any ORM or ODM you prefer.
 
 **Q: What if I need multiple databases?**
-A: The wrapper supports multiple connections via different URIs. Call `connect()` with different URIs and labels. Each gets its own pool.
+A: StrictDB supports multiple connections via different URIs. Call `connect()` with different URIs and labels. Each gets its own pool.
 
-**Q: How do I switch from MongoDB to PostgreSQL?**
-A: Use the SQL wrapper at `src/core/db/sql.ts` instead. Set `DATABASE_URL=postgresql://...` in `.env`. The SQL wrapper has the same patterns (queryOne, queryMany, insertOne, withTransaction).
+**Q: How do I switch database engines (e.g., MongoDB to PostgreSQL)?**
+A: Change `STRICTDB_URI` in `.env` to point at the new engine (e.g., `STRICTDB_URI=postgresql://...`). StrictDB auto-detects the driver from the URI scheme. Your `queryOne`, `queryMany`, `insertOne` calls stay the same.
 
 ### Testing
 

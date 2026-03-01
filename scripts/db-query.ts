@@ -13,14 +13,14 @@
  *
  * WHY THIS PATTERN:
  * - Keeps test/dev database code COMPLETELY separate from production code
- * - Every query uses the mongo core wrapper (src/core/db/) — no raw MongoDB
+ * - Every query uses the StrictDB wrapper (src/core/db/) — no raw driver imports
  * - Easy to see at a glance what queries exist and what they do
  * - Individual files are easy to review, modify, and delete
  * - Production code in src/ never touches this — clean separation
  *
  * RULES:
- * - EVERY query file MUST import from '@/core/db/index.js' (the wrapper)
- * - NEVER import 'mongodb' directly in query files
+ * - EVERY query file MUST import from '@/core/db/index.js' (the StrictDB wrapper)
+ * - NEVER import 'strictdb' or native drivers directly in query files
  * - NEVER copy query logic into production code — if you need it in prod,
  *   create a proper handler in src/handlers/
  * - Each query file exports: { name, description, run(args) }

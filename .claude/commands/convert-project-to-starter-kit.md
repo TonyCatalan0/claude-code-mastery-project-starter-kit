@@ -269,7 +269,7 @@ Create a minimal CLAUDE.md with security-only rules (safe for any project type):
 
 - ALWAYS use environment variables for secrets
 - NEVER put API keys, passwords, or tokens directly in code
-- NEVER hardcode connection strings — use DATABASE_URL from .env
+- NEVER hardcode connection strings — use STRICTDB_URI from .env
 
 ### 6. ALWAYS Ask Before Deploying
 
@@ -353,7 +353,6 @@ Report each file: `+ copied`, `merged (N lines added)`, or `skipped (exists)`
 **Database wrapper** (if user chose "yes, add database wrapper"):
 - Create `$TARGET/src/core/db/` directory
 - Copy `$SOURCE/src/core/db/index.ts` if missing in target
-- Copy `$SOURCE/src/core/db/sql.ts` if missing in target
 
 **Test configs** (if user chose "yes"):
 - Copy `$SOURCE/vitest.config.ts` if missing in target
@@ -388,8 +387,7 @@ Report each file: `+ copied`, `merged (N lines added)`, or `skipped (exists)`
 After language-specific files are copied, auto-detect which features were installed and write a manifest.
 
 1. Check which feature-related files now exist in `$TARGET`:
-   - `src/core/db/index.ts` → feature `mongo`
-   - `src/core/db/sql.ts` → feature `postgres`
+   - `src/core/db/index.ts` → feature `mongo` (or `postgres` — StrictDB handles both)
    - `vitest.config.ts` → feature `vitest`
    - `playwright.config.ts` → feature `playwright`
    - `scripts/build-content.ts` → feature `content`

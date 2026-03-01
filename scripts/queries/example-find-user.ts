@@ -4,7 +4,7 @@
  * Usage: npx tsx scripts/db-query.ts example-find-user <email>
  *
  * This is a TEST query — not production code.
- * Uses the mongo core wrapper exclusively.
+ * Uses the StrictDB wrapper exclusively.
  */
 
 import { queryOne } from '../../src/core/db/index.js';

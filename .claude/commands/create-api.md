@@ -1,7 +1,7 @@
 ---
 description: Scaffold a new API endpoint — route, handler, types, tests — wired into the server
 scope: project
-argument-hint: <resource-name> [--no-mongo]
+argument-hint: <resource-name> [--no-db]
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, AskUserQuestion
 ---
 
@@ -39,7 +39,7 @@ Before scaffolding, read the current project:
 5. **Scan `src/types/`** — check for existing type patterns
 6. **Read `.env.example`** — check for database config
 
-If `--no-mongo` is in the arguments, skip MongoDB integration. Otherwise, use the db wrapper by default.
+If `--no-db` is in the arguments, skip database integration. Otherwise, use the StrictDB wrapper by default.
 
 ## Step 2 — Create Files
 
@@ -48,11 +48,9 @@ Generate these files for the resource:
 ### File 1: `src/types/<resource>.ts` — Types first (they're the spec)
 
 ```typescript
-import type { Document, ObjectId } from 'mongodb';
-
 /** Database document shape */
-export interface <Resource>Doc extends Document {
-  _id: ObjectId;
+export interface <Resource>Doc {
+  _id: string;
   // Add fields based on the resource
   createdAt: Date;
   updatedAt: Date;
@@ -87,16 +85,18 @@ import {
   updateOne,
   deleteOne,
   count,
-  registerIndex,
+  registerCollection,
 } from '../core/db/index.js';
 import type { <Resource>Doc, Create<Resource>Body, Update<Resource>Body, <Resource>Response } from '../types/<resource>.js';
-import { ObjectId } from 'mongodb';
 
 // ---------------------------------------------------------------------------
-// Indexes — registered at import time, created at startup via ensureIndexes()
+// Schema + indexes — registered at import time, created at startup via ensureIndexes()
 // ---------------------------------------------------------------------------
 
-registerIndex({ collection: '<resources>', fields: { createdAt: -1 } });
+registerCollection({
+  name: '<resources>',
+  indexes: [{ collection: '<resources>', fields: { createdAt: -1 } }],
+});
 // Add more indexes based on query patterns
 
 // ---------------------------------------------------------------------------
@@ -108,7 +108,7 @@ const COLLECTION = '<resources>';
 /** Map a database document to API response (never expose internals) */
 function toResponse(doc: <Resource>Doc): <Resource>Response {
   return {
-    id: doc._id.toHexString(),
+    id: String(doc._id),
     // Map other fields
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
@@ -134,8 +134,7 @@ export async function create<Resource>(body: Create<Resource>Body): Promise<<Res
 }
 
 export async function get<Resource>ById(id: string): Promise<<Resource>Response | null> {
-  if (!ObjectId.isValid(id)) return null;
-  const doc = await queryOne<<Resource>Doc>(COLLECTION, { _id: new ObjectId(id) });
+  const doc = await queryOne<<Resource>Doc>(COLLECTION, { _id: id });
   return doc ? toResponse(doc) : null;
 }
 
@@ -164,9 +163,8 @@ export async function update<Resource>(
   id: string,
   body: Update<Resource>Body
 ): Promise<<Resource>Response | null> {
-  if (!ObjectId.isValid(id)) return null;
-  const filter = { _id: new ObjectId(id) };
-  await updateOne<<Resource>Doc>(COLLECTION, filter, {
+  const filter = { _id: id };
+  await updateOne(COLLECTION, filter, {
     $set: { ...body, updatedAt: new Date() },
   });
   const updated = await queryOne<<Resource>Doc>(COLLECTION, filter);
@@ -174,8 +172,7 @@ export async function update<Resource>(
 }
 
 export async function delete<Resource>(id: string): Promise<boolean> {
-  if (!ObjectId.isValid(id)) return false;
-  await deleteOne<<Resource>Doc>(COLLECTION, { _id: new ObjectId(id) });
+  await deleteOne(COLLECTION, { _id: id });
   return true;
 }
 ```
@@ -341,7 +338,7 @@ describe('<Resource> Handlers', () => {
 Every generated endpoint MUST follow these rules:
 
 ### Security
-- All user input passes through the db wrapper's automatic NoSQL sanitization
+- All user input passes through StrictDB's built-in sanitization and guardrails
 - NEVER trust `req.body` types at runtime — validate or use Zod schemas
 - NEVER expose `_id` directly — always map to `id: string`
 - NEVER expose internal error details to the client
@@ -349,7 +346,7 @@ Every generated endpoint MUST follow these rules:
 
 ### Performance
 - Pagination on ALL list endpoints (default 20, max 100)
-- Indexes registered for all query patterns (`registerIndex()`)
+- Indexes registered for all query patterns (`registerCollection()`)
 - Uses shared connection pool via db wrapper (NEVER creates new connections)
 - `$limit` enforced before `$lookup` in any join queries
 
@@ -365,7 +362,7 @@ Every generated endpoint MUST follow these rules:
 - Proper HTTP status codes (201 created, 204 no content, 404 not found)
 - JSON responses on all endpoints (including errors)
 - No callback-style code — async/await only
-- Uses the project's shared MongoDB pool (never creates its own)
+- Uses the project's shared StrictDB instance (never creates its own)
 
 ## Step 4 — Verification Checklist
 
@@ -378,12 +375,12 @@ After generating, verify:
 - [ ] Test file created at `tests/unit/<resource>.test.ts`
 - [ ] All CRUD operations: create, read (single + list), update, delete
 - [ ] Pagination on list endpoint (default 20, max 100)
-- [ ] Indexes registered with `registerIndex()`
+- [ ] Indexes registered with `registerCollection()`
 - [ ] No `any` types
 - [ ] No file exceeds 300 lines
 - [ ] _id never exposed — mapped to id string
 - [ ] All errors caught and logged
-- [ ] Uses db wrapper imports (NEVER raw MongoClient)
+- [ ] Uses db wrapper imports (NEVER raw StrictDB or driver imports)
 
 ## RuleCatch Report
 

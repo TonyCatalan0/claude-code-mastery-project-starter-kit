@@ -56,18 +56,20 @@ All new code MUST be TypeScript with strict mode. When editing existing JavaScri
 
 ---
 
-## ADR-002: Centralized Database Wrapper
+## ADR-002: Centralized Database Wrapper (StrictDB)
 
 **Date:** (today)
-**Status:** Accepted
+**Status:** Accepted (updated: migrated from custom wrappers to StrictDB)
 
 ### Context
-Without a centralized wrapper, each file creates its own database connection, leading to connection pool exhaustion.
+Without a centralized wrapper, each file creates its own database connection, leading to connection pool exhaustion. Originally solved with custom MongoDB + SQL wrappers (~1,170 lines combined). Migrated to StrictDB — a unified driver supporting MongoDB, PostgreSQL, MySQL, MSSQL, SQLite, and Elasticsearch through a single API.
 
 ### Decision
-All database access goes through `src/core/db/`. No other file may create database connections directly.
+All database access goes through `src/core/db/index.ts`, a thin adapter around StrictDB. No other file may import `strictdb` or native database drivers directly.
 
 ### Consequences
 - Single connection pool prevents exhaustion
 - One place to add logging, metrics, retries
 - Easy to mock for testing
+- One API for all backends — switching databases requires only changing STRICTDB_URI
+- Built-in sanitization, guardrails, and AI-first discovery (describe, validate, explain)

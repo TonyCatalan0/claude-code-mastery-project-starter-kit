@@ -30,7 +30,7 @@
 
 | Variable | Required | Where | Purpose |
 |----------|----------|-------|---------|
-| `DATABASE_URL` | Yes | API | Database connection string |
+| `STRICTDB_URI` | Yes | API | Database connection string (auto-detects backend) |
 | `JWT_SECRET` | Yes | API | Token signing |
 | `PORT` | No | All | Service port (has defaults) |
 

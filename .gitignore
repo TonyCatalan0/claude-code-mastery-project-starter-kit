@@ -49,11 +49,8 @@ yarn-error.log*
 # Temporary AI research files
 _ai_temp/
 
-# Audit plans and working docs
-plans/
-
-# MDD documentation (auto-generated, not for git)
-documentation/
+# MDD working directory (docs, audit notes, reports)
+.mdd/
 
 # Misc
 *.bak

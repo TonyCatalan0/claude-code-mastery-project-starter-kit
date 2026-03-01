@@ -96,6 +96,7 @@
     <nav id="mobile-toc" class="mobile-toc">
       <div class="toc-header">Contents</div>
       <a href="#whats-included">What's Included</a>
+      <a href="#mdd-workflow">MDD Workflow ✨ NEW</a>
       <a href="#featured-packages">Featured Packages</a>
       <a href="#what-is-this">What Is This?</a>
       <a href="#learning-path">Learning Path</a>
@@ -158,6 +159,7 @@
       <nav id="toc">
         <div class="toc-header">Contents</div>
         <a href="#whats-included" class="active">What's Included</a>
+        <a href="#mdd-workflow" class="nav-new">MDD Workflow ✨ NEW</a>
         <a href="#featured-packages">Featured Packages</a>
         <a href="#what-is-this">What Is This?</a>
         <a href="#learning-path">Learning Path</a>
@@ -196,7 +198,7 @@
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             </div>
             <h3>CLAUDE.md</h3>
-            <p>Battle-tested project instructions with numbered critical rules for security, TypeScript, database wrappers, testing, and deployment.</p>
+            <p>Battle-tested project instructions with numbered critical rules for security, TypeScript, StrictDB adapter, testing, and deployment.</p>
           </div>
 
           <div class="feature-card">
@@ -252,7 +254,7 @@
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             </div>
             <h3>Testing Templates</h3>
-            <p>Master test checklist, issue tracking log, and a singleton database wrapper that prevents connection pool explosion. Smart NoSQL injection sanitization allows safe operators while stripping dangerous ones.</p>
+            <p>Master test checklist, issue tracking log, and a unified StrictDB wrapper that prevents connection pool explosion. Built-in sanitization and guardrails allow safe operators while stripping dangerous ones.</p>
           </div>
 
           <div class="feature-card">
@@ -263,6 +265,139 @@
             <p>See every tool call, token, cost, and file access in real-time. Free monitor mode works instantly &mdash; no API key, no setup. Run <code>pnpm ai:monitor</code> in a separate terminal. Zero token overhead.</p>
           </div>
         </div>
+      </section>
+
+      <!-- MDD Workflow -->
+      <section id="mdd-workflow">
+        <h2>MDD Workflow <span style="background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; font-size: 0.5em; padding: 0.2em 0.6em; border-radius: 999px; vertical-align: middle; margin-left: 0.5em;">NEW</span></h2>
+        <p style="font-size: 1.1em; color: var(--text-secondary); margin-bottom: 1.5rem;">Manual-First Development &mdash; the built-in methodology that turns Claude Code from a code generator into a development partner. Every feature starts with documentation. Every fix starts with an audit.</p>
+
+        <div class="callout" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(239, 68, 68, 0.05)); border-left: 4px solid #f59e0b; padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+          <strong>We used MDD to audit this starter kit.</strong> Result: 20 findings discovered, 17 fixed, and 125 tests written from zero &mdash; all in <strong>23 minutes</strong>. The methodology the starter kit teaches was used to audit the starter kit itself.
+        </div>
+
+        <h3>What is MDD?</h3>
+        <p>Most people prompt Claude Code like this: <em>"fix the bug in my auth system."</em> Claude reads 40 files, burns through context trying to understand your architecture, and produces something that technically compiles but misses the bigger picture.</p>
+        <p>MDD flips this. You write structured documentation first, then Claude reads <strong>one doc</strong> instead of 40 files. It gets the full picture in 200 tokens instead of 20,000. Every phase reads the output of the previous phase, compressing context further at each step.</p>
+
+        <h3>The Workflow</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #f59e0b;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">📋</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Document</strong>
+            <small style="color: var(--text-muted);">Write feature docs with YAML frontmatter</small>
+          </div>
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #3b82f6;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">🔍</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Audit</strong>
+            <small style="color: var(--text-muted);">Read code, write incremental notes to disk</small>
+          </div>
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #8b5cf6;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">📊</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Analyze</strong>
+            <small style="color: var(--text-muted);">Produce severity-rated findings report</small>
+          </div>
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #10b981;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">🔧</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Fix</strong>
+            <small style="color: var(--text-muted);">Execute pre-planned fixes with tests</small>
+          </div>
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #06b6d4;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">✅</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Verify</strong>
+            <small style="color: var(--text-muted);">Tests pass, types check, docs updated</small>
+          </div>
+        </div>
+
+        <h3>Usage</h3>
+        <p>One command, three modes:</p>
+
+        <pre><code class="language-bash"># Build a new feature (Document → Test skeletons → Implement → Verify)
+/mdd add user authentication with JWT tokens
+
+# Audit existing code (Read → Notes → Report → Fix)
+/mdd audit
+/mdd audit database    # audit a specific section
+
+# Check MDD status (docs, tests, findings, quality gates)
+/mdd status</code></pre>
+
+        <h3>Build Mode &mdash; New Features</h3>
+        <p>When you run <code>/mdd &lt;feature description&gt;</code>, Claude follows a structured 6-phase process:</p>
+        <ol style="line-height: 1.8;">
+          <li><strong>Understand</strong> &mdash; Reads your architecture, existing docs, asks all questions upfront</li>
+          <li><strong>Document</strong> &mdash; Creates a numbered MDD doc in <code>.mdd/docs/</code> with full YAML frontmatter</li>
+          <li><strong>Test Skeletons</strong> &mdash; Generates failing tests from the documentation (Doc → Test → Code)</li>
+          <li><strong>Plan</strong> &mdash; Presents named steps with time estimates, waits for your approval</li>
+          <li><strong>Implement</strong> &mdash; Builds code until tests pass, reports progress per step</li>
+          <li><strong>Verify</strong> &mdash; Full test suite, typecheck, documentation updated</li>
+        </ol>
+        <p>Tests are generated <em>before</em> code. They define the finish line. If a test fails, the implementation gets fixed &mdash; not the test.</p>
+
+        <h3>Audit Mode &mdash; Existing Code</h3>
+        <p>When you run <code>/mdd audit</code>, Claude runs a complete security and quality audit:</p>
+        <ol style="line-height: 1.8;">
+          <li><strong>Scope</strong> &mdash; Reads all <code>.mdd/docs/</code> files, builds the feature map</li>
+          <li><strong>Read + Notes</strong> &mdash; Reads all source files, writes notes every 2 features (survives context compaction)</li>
+          <li><strong>Analyze</strong> &mdash; Reads only the notes (not source code again), produces findings report</li>
+          <li><strong>Present</strong> &mdash; Shows top issues with severity, estimated fix time, asks what to fix</li>
+          <li><strong>Fix</strong> &mdash; Applies fixes from the report, writes tests, updates documentation</li>
+        </ol>
+
+        <h3>The <code>.mdd/</code> Directory</h3>
+        <p>All MDD artifacts live in a single dotfile directory, gitignored by default:</p>
+        <pre><code class="language-bash">.mdd/
+├── docs/                        # Feature documentation (one per feature)
+│   ├── 01-project-scaffolding.md
+│   ├── 02-profile-system.md
+│   └── ...
+└── audits/                      # Audit artifacts
+    ├── notes-2026-03-01.md      # Raw reading notes
+    ├── report-2026-03-01.md     # Structured findings
+    └── results-2026-03-01.md    # Before/after summary</code></pre>
+
+        <h3>Real Results: Self-Audit</h3>
+        <p>We used MDD to audit this starter kit &mdash; the same methodology the kit teaches. Here's what happened:</p>
+
+        <table style="width: 100%; margin: 1rem 0;">
+          <thead>
+            <tr><th>Phase</th><th>Time</th><th>Output</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Phase 0: Documentation</td><td>~25 min</td><td>9 feature docs (795 lines) in <code>.mdd/docs/</code></td></tr>
+            <tr><td>Phase 1: Read + Notes</td><td>9 min 51s</td><td>57+ files read, 837 lines of notes</td></tr>
+            <tr><td>Phase 2: Analyze</td><td>2 min 39s</td><td>298-line report, 20 findings</td></tr>
+            <tr><td>Phase 3: Fix All</td><td>10 min 53s</td><td>17/20 fixed, 125 tests written</td></tr>
+            <tr style="font-weight: bold; background: rgba(245, 158, 11, 0.1);"><td>Total</td><td>~48 min</td><td>20 findings, 125 tests from zero</td></tr>
+          </tbody>
+        </table>
+
+        <table style="width: 100%; margin: 1rem 0;">
+          <thead>
+            <tr><th>Metric</th><th>Before MDD</th><th>After MDD</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Unit tests</td><td>0</td><td>94</td></tr>
+            <tr><td>Test files</td><td>0</td><td>5</td></tr>
+            <tr><td>Documentation files</td><td>3</td><td>14</td></tr>
+            <tr><td>Known issues documented</td><td>0</td><td>84</td></tr>
+            <tr><td>Findings found &amp; fixed</td><td>0</td><td>17/20</td></tr>
+            <tr><td>Quality gate violations</td><td>1 (651-line file)</td><td>0 (split into 5 modules)</td></tr>
+            <tr><td>Config validation</td><td>None (raw JSON.parse)</td><td>Zod schema with fail-fast</td></tr>
+            <tr><td>Secret detection patterns</td><td>4 basic</td><td>10+ (GitHub, Slack, Stripe, PEM, JWT)</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Why It Works</h3>
+        <p>The problem with Claude Code isn't intelligence &mdash; it's context. A 200K token window sounds huge until you're reading 40 files and burning 80% of context on comprehension before writing a single line of output.</p>
+        <p>MDD makes each phase a context compressor: documentation compresses 40 files into 1 doc, raw notes compress all source code into a single file, the audit report compresses notes into severity-rated findings. By the time Claude writes code, it's working from a 300-line report &mdash; not a 40,000-line codebase. It's not problem-solving. It's pattern-matching.</p>
+
+        <h3>The Incremental Write Trick</h3>
+        <p>The most important technical detail: when Claude reads files during an audit, context will compact. If your findings are only in Claude's memory, they're gone.</p>
+        <p>Instead, Claude writes notes to disk every 2 features. If context compacts, it reads the tail of the notes file and picks up where it left off. We've run this pattern across 6 complete audit cycles. <strong>Zero data loss.</strong></p>
+        <pre><code class="language-text">After processing every 2 features, immediately append your notes to
+.mdd/audits/notes.md. If context compacts, read the TAIL of the notes
+file and continue from where you left off.</code></pre>
       </section>
 
       <!-- Featured Packages -->
@@ -331,6 +466,13 @@
         <h2>Learning Path</h2>
         <p>Progress through these phases at your own pace. Each builds on the previous one.</p>
 
+        <div class="callout" style="background: var(--bg-secondary); border-left: 4px solid var(--accent-cyan); padding: 1rem 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+          <strong>Two workflows, one toolkit.</strong> The starter kit supports two development approaches:<br>
+          &bull; <strong>Classic</strong> &mdash; <code>/review</code>, <code>/commit</code>, <code>/create-api</code>, <code>/create-e2e</code> (individual commands, you drive)<br>
+          &bull; <strong>MDD</strong> &mdash; <code>/mdd</code> (structured Document &rarr; Test &rarr; Code workflow, Claude drives with your approval)<br>
+          Both use the same hooks, rules, and quality gates. MDD adds structured documentation and audit capabilities on top. <a href="#mdd-workflow">Learn more about MDD &rarr;</a>
+        </div>
+
         <div class="learning-phases">
           <div class="phase">
             <div class="phase-number">1</div>
@@ -344,23 +486,25 @@
             </ul>
           </div>
           <div class="phase-arrow">&rarr;</div>
-          <div class="phase">
+          <div class="phase" style="border-top: 2px solid #f59e0b;">
             <div class="phase-number">2</div>
-            <h3>Daily Workflow</h3>
+            <h3>Build Features</h3>
             <ul>
+              <li><code>/mdd &lt;feature&gt;</code> <span style="background: #f59e0b; color: #000; font-size: 0.65em; padding: 0.1em 0.4em; border-radius: 4px; vertical-align: middle;">MDD</span></li>
               <li><code>/review</code></li>
               <li><code>/commit</code></li>
-              <li><code>/progress</code></li>
+              <li><code>/create-api</code></li>
             </ul>
           </div>
           <div class="phase-arrow">&rarr;</div>
-          <div class="phase">
+          <div class="phase" style="border-top: 2px solid #f59e0b;">
             <div class="phase-number">3</div>
-            <h3>Docs &amp; Testing</h3>
+            <h3>Quality &amp; Testing</h3>
             <ul>
-              <li><code>/diagram all</code></li>
-              <li><code>/test-plan</code></li>
+              <li><code>/mdd audit</code> <span style="background: #f59e0b; color: #000; font-size: 0.65em; padding: 0.1em 0.4em; border-radius: 4px; vertical-align: middle;">MDD</span></li>
+              <li><code>/mdd status</code> <span style="background: #f59e0b; color: #000; font-size: 0.65em; padding: 0.1em 0.4em; border-radius: 4px; vertical-align: middle;">MDD</span></li>
               <li><code>/create-e2e</code></li>
+              <li><code>/test-plan</code></li>
             </ul>
           </div>
           <div class="phase-arrow">&rarr;</div>
@@ -392,7 +536,12 @@
 cd ~/projects/my-app               # Enter your new project
 /setup                             # Configure .env interactively
 pnpm install && pnpm dev           # Start building</code></pre>
-        <p>Use <code>/help</code> to see all 26 commands at any time.</p>
+
+        <h3>First Feature (MDD Workflow)</h3>
+        <pre class="language-bash"><code class="language-bash">/mdd add user authentication       # Claude interviews you, writes docs, generates
+                                    # test skeletons, presents a plan, then builds</code></pre>
+
+        <p>Use <code>/help</code> to see all 27 commands at any time.</p>
       </section>
 
       <!-- Quick Start -->
@@ -445,7 +594,7 @@ cp .claude/hooks/check-rulecatch.sh ~/.claude/hooks/</code></pre>
               <li>Run <code>/diagram all</code> &mdash; Auto-generate architecture, API, database, and infrastructure diagrams</li>
               <li>Edit <code>CLAUDE.local.md</code> &mdash; Add your personal preferences</li>
             </ol>
-            <p>The database wrapper (<code>src/core/db/index.ts</code>) works out of the box &mdash; just set <code>DATABASE_URL</code> in your <code>.env</code> and it connects to MongoDB automatically. Smart NoSQL injection sanitization runs on all inputs: safe operators (<code>$gte</code>, <code>$in</code>, <code>$regex</code>, etc.) pass through while dangerous operators (<code>$where</code>, <code>$function</code>) are stripped. See the <a href="#database-wrapper">Database Wrapper</a> section for details.</p>
+            <p>The StrictDB adapter (<code>src/core/db/index.ts</code>) works out of the box &mdash; just set <code>STRICTDB_URI</code> in your <code>.env</code> and it connects automatically. Built-in sanitization and guardrails run on all inputs: safe operators (<code>$gte</code>, <code>$in</code>, <code>$regex</code>, etc.) pass through while dangerous operators (<code>$where</code>, <code>$function</code>) are stripped. Supports MongoDB, PostgreSQL, MySQL, MSSQL, SQLite, and Elasticsearch. See the <a href="#database-wrapper">Database Wrapper</a> section for details.</p>
           </div>
         </div>
 
@@ -473,7 +622,7 @@ cp .claude/hooks/check-rulecatch.sh ~/.claude/hooks/</code></pre>
           </div>
           <div class="troubleshooting-item">
             <h4>Database Connection Errors</h4>
-            <p>Run <code>/setup</code> to configure your <code>.env</code> with a valid connection string. Check that <code>MONGODB_URI</code> is set and your IP is whitelisted in MongoDB Atlas.</p>
+            <p>Run <code>/setup</code> to configure your <code>.env</code> with a valid connection string. Check that <code>STRICTDB_URI</code> is set and your IP is whitelisted (if using a cloud database like MongoDB Atlas).</p>
           </div>
           <div class="troubleshooting-item">
             <h4><code>/install-global</code> Reports Conflicts</h4>
@@ -552,7 +701,7 @@ cp .claude/hooks/check-rulecatch.sh ~/.claude/hooks/</code></pre>
 ├── docs/                        # GitHub Pages site
 │   └── user-guide.html          # Interactive User Guide (HTML)
 ├── src/
-│   ├── core/db/index.ts         # Centralized database wrapper
+│   ├── core/db/index.ts         # StrictDB adapter (unified database driver)
 │   ├── handlers/                # Business logic
 │   ├── adapters/                # External service wrappers
 │   └── types/                   # Shared TypeScript types
@@ -690,12 +839,13 @@ WRONG:   /api/users</code></pre>
           <div class="rule-block">
             <div class="rule-header">
               <span class="rule-number">Rule 3</span>
-              <h3>Database Access &mdash; Wrapper Only</h3>
+              <h3>Database Access &mdash; StrictDB Only</h3>
             </div>
             <ul>
               <li>NEVER create direct database connections outside <code>src/core/db/</code></li>
-              <li>ALWAYS use the centralized database wrapper</li>
-              <li>Smart NoSQL injection sanitization: safe operators pass through, dangerous operators (<code>$where</code>, <code>$function</code>) stripped. Use <code>{ trusted: true }</code> for non-standard operators</li>
+              <li>ALWAYS use the unified StrictDB adapter</li>
+              <li>Built-in sanitization and guardrails: safe operators pass through, dangerous operators (<code>$where</code>, <code>$function</code>) stripped. Use <code>{ trusted: true }</code> for non-standard operators</li>
+              <li>Supports MongoDB, PostgreSQL, MySQL, MSSQL, SQLite, and Elasticsearch</li>
               <li>One connection pool. One place to change. One place to mock.</li>
             </ul>
           </div>
@@ -719,7 +869,7 @@ await page.goto('/dashboard');
               <span class="rule-number">Rule 5</span>
               <h3>NEVER Hardcode Credentials</h3>
             </div>
-            <p>ALWAYS use environment variables. NEVER put API keys, passwords, or tokens directly in code. NEVER hardcode connection strings &mdash; use <code>DATABASE_URL</code> from <code>.env</code>.</p>
+            <p>ALWAYS use environment variables. NEVER put API keys, passwords, or tokens directly in code. NEVER hardcode connection strings &mdash; use <code>STRICTDB_URI</code> from <code>.env</code>.</p>
           </div>
 
           <div class="rule-block">
@@ -1023,7 +1173,7 @@ fi</code></pre>
             <p class="command-desc">Interactive project configuration. Walks you through setting up your <code>.env</code> with real values:</p>
             <ul>
               <li><strong>Multi-region</strong> &mdash; US + EU with isolated databases, VPS, and Dokploy per region</li>
-              <li><strong>Database</strong> &mdash; MongoDB/PostgreSQL per region (<code>MONGODB_URI_US</code>, <code>MONGODB_URI_EU</code>)</li>
+              <li><strong>Database</strong> &mdash; StrictDB per region (<code>STRICTDB_URI_US</code>, <code>STRICTDB_URI_EU</code>)</li>
               <li><strong>Deployment</strong> &mdash; Dokploy on Hostinger VPS per region (IP, API key, app ID, webhook token)</li>
               <li><strong>Docker</strong> &mdash; Hub username, image name, region tagging (<code>:latest</code> for US, <code>:eu</code> for EU)</li>
               <li><strong>GitHub</strong> &mdash; username, SSH vs HTTPS</li>
@@ -1065,7 +1215,7 @@ npx @rulecatch/ai-pooler monitor --no-api-key</code></pre>
               <li><strong>Error Handling</strong> &mdash; No swallowed errors</li>
               <li><strong>Performance</strong> &mdash; No N+1 queries, no memory leaks</li>
               <li><strong>Testing</strong> &mdash; New code has explicit assertions</li>
-              <li><strong>Database</strong> &mdash; Using centralized wrapper</li>
+              <li><strong>Database</strong> &mdash; Using StrictDB adapter</li>
               <li><strong>API Versioning</strong> &mdash; All endpoints use <code>/api/v1/</code></li>
             </ol>
             <p>Issues are reported with severity (Critical / Warning / Info), file:line references, and suggested fixes.</p>
@@ -1150,7 +1300,7 @@ npx @rulecatch/ai-pooler monitor --no-api-key</code></pre>
               <li><strong>Route</strong> &mdash; <code>src/routes/v1/&lt;resource&gt;.ts</code> (thin routes, proper HTTP status codes)</li>
               <li><strong>Tests</strong> &mdash; <code>tests/unit/&lt;resource&gt;.test.ts</code> (happy path, error cases, edge cases)</li>
             </ul>
-            <p>Uses the db wrapper with shared pool, auto-sanitized inputs, pagination (max 100), registered indexes, and <code>/api/v1/</code> prefix. Pass <code>--no-mongo</code> to skip MongoDB integration.</p>
+            <p>Uses the StrictDB adapter with shared pool, auto-sanitized inputs, pagination (max 100), registered indexes, and <code>/api/v1/</code> prefix. Pass <code>--no-db</code> to skip database integration.</p>
           </div>
 
           <div class="command-card">
@@ -1181,17 +1331,17 @@ npx @rulecatch/ai-pooler monitor --no-api-key</code></pre>
 /new-project my-app fullstack next dokploy seo tailwind pnpm
 /new-project my-api api fastify dokploy docker multiregion
 /new-project my-site static-site
-/new-project my-api go                    # Go API with Gin, MongoDB, Docker
+/new-project my-api go                    # Go API with Gin, StrictDB, Docker
 /new-project my-api go chi postgres       # Go with Chi, PostgreSQL
 /new-project my-cli go cli                # Go CLI with Cobra
 /new-project my-app vue                    # Vue 3 SPA with Tailwind
-/new-project my-app nuxt                   # Nuxt full-stack with MongoDB, Docker
+/new-project my-app nuxt                   # Nuxt full-stack with StrictDB, Docker
 /new-project my-app sveltekit              # SvelteKit full-stack
 /new-project my-api python-api             # FastAPI with PostgreSQL, Docker
 /new-project my-app django                 # Django full-stack</code></pre>
-            <p><strong><code>clean</code></strong> &mdash; All Claude infrastructure (commands, skills, agents, hooks, project-docs, tests templates) with <strong>zero coding opinions</strong>. No TypeScript enforcement, no port assignments, no database wrapper, no quality gates. Your project, your rules &mdash; Claude just works.</p>
+            <p><strong><code>clean</code></strong> &mdash; All Claude infrastructure (commands, skills, agents, hooks, project-docs, tests templates) with <strong>zero coding opinions</strong>. No TypeScript enforcement, no port assignments, no StrictDB adapter, no quality gates. Your project, your rules &mdash; Claude just works.</p>
             <p><strong><code>go</code></strong> &mdash; Go project scaffolding with standard layout (cmd/, internal/), Gin router, Makefile builds, golangci-lint, table-driven tests, multi-stage Docker with scratch base (5-15MB images). Supports Gin, Chi, Echo, Fiber, or stdlib net/http.</p>
-            <p><strong><code>default</code></strong> and other profiles &mdash; Full opinionated scaffolding with project type, framework, SSR, hosting (Dokploy/Vercel/static), package manager, database, extras (Tailwind, Prisma, Docker, CI), and MCP servers. Includes mandatory SEO for web projects and Dokploy deployment scripts with multi-region support.</p>
+            <p><strong><code>default</code></strong> and other profiles &mdash; Full opinionated scaffolding with project type, framework, SSR, hosting (Dokploy/Vercel/static), package manager, database (via StrictDB), extras (Tailwind, Prisma, Docker, CI), and MCP servers. Includes mandatory SEO for web projects and Dokploy deployment scripts with multi-region support.</p>
             <p><strong><code>vue</code> / <code>nuxt</code> / <code>svelte</code> / <code>sveltekit</code> / <code>angular</code></strong> &mdash; Frontend framework scaffolding with CLI scaffold + starter kit overlay. Each gets framework-specific CLAUDE.md rules (Composition API for Vue, Runes for Svelte, Standalone Components for Angular).</p>
             <p><strong><code>python-api</code> / <code>django</code> / <code>flask</code></strong> &mdash; Python project scaffolding with FastAPI/Django/Flask, pytest, ruff linter, virtual environment, and multi-stage Docker. Full type hints enforced.</p>
             <p>Use <code>claude-mastery-project.conf</code> profiles to save your preferred stack.</p>
@@ -1204,12 +1354,12 @@ npx @rulecatch/ai-pooler monitor --no-api-key</code></pre>
 
           <div class="command-card">
             <h3><code>/add-project-setup</code></h3>
-            <p class="command-desc">Interactive wizard to create a named profile in <code>claude-mastery-project.conf</code>. Asks about language, framework, database, hosting, and more. Use with <code>/new-project my-app &lt;profile-name&gt;</code>.</p>
+            <p class="command-desc">Interactive wizard to create a named profile in <code>claude-mastery-project.conf</code>. Asks about language, framework, database (via StrictDB), hosting, and more. Use with <code>/new-project my-app &lt;profile-name&gt;</code>.</p>
           </div>
 
           <div class="command-card">
             <h3><code>/projects-created</code></h3>
-            <p class="command-desc">Lists every project scaffolded by <code>/new-project</code>, with creation date, profile, language, framework, database, and location. Checks which projects still exist on disk and marks missing ones. Data stored in <code>~/.claude/starter-kit-projects.json</code>.</p>
+            <p class="command-desc">Lists every project scaffolded by <code>/new-project</code>, with creation date, profile, language, framework, database (StrictDB), and location. Checks which projects still exist on disk and marks missing ones. Data stored in <code>~/.claude/starter-kit-projects.json</code>.</p>
           </div>
 
           <div class="command-card">
@@ -1233,8 +1383,8 @@ npx @rulecatch/ai-pooler monitor --no-api-key</code></pre>
 
           <div class="command-card">
             <h3><code>/add-feature &lt;name&gt;</code></h3>
-            <p class="command-desc">Add capabilities (MongoDB, Docker, testing, etc.) to an existing project after scaffolding. Idempotent &mdash; safely updates already-installed features. Maintains a feature manifest (<code>.claude/features.json</code>) so <code>/update-project</code> can sync feature files too.</p>
-            <pre class="language-bash"><code class="language-bash">/add-feature mongo            # Add MongoDB wrapper + query system
+            <p class="command-desc">Add capabilities (StrictDB, Docker, testing, etc.) to an existing project after scaffolding. Idempotent &mdash; safely updates already-installed features. Maintains a feature manifest (<code>.claude/features.json</code>) so <code>/update-project</code> can sync feature files too.</p>
+            <pre class="language-bash"><code class="language-bash">/add-feature strictdb         # Add StrictDB adapter + query system
 /add-feature vitest playwright # Add both test frameworks
 /add-feature --list           # Show all available features</code></pre>
           </div>
@@ -1256,7 +1406,7 @@ npx @rulecatch/ai-pooler monitor --no-api-key</code></pre>
               <tr><td><strong>Backend (Node.js)</strong></td><td>Fastify, Express, Hono</td><td>API scaffolding with <code>/create-api</code></td></tr>
               <tr><td><strong>Backend (Go)</strong></td><td>Gin, Chi, Echo, Fiber, stdlib</td><td>Standard layout cmd/internal/</td></tr>
               <tr><td><strong>Backend (Python)</strong></td><td>FastAPI, Django, Flask</td><td>Async, Pydantic, pytest</td></tr>
-              <tr><td><strong>Database</strong></td><td>MongoDB, PostgreSQL, MySQL, MSSQL, SQLite</td><td>Centralized wrapper for each</td></tr>
+              <tr><td><strong>Database</strong></td><td>MongoDB, PostgreSQL, MySQL, MSSQL, SQLite, Elasticsearch</td><td>Unified StrictDB adapter</td></tr>
               <tr><td><strong>Hosting</strong></td><td>Dokploy, Vercel, Static</td><td>Deploy scripts + Docker</td></tr>
               <tr><td><strong>Testing</strong></td><td>Vitest, Playwright, pytest, Go test</td><td>Framework-appropriate setup</td></tr>
               <tr><td><strong>CSS</strong></td><td>Tailwind CSS + ClassMCP + Classpresso</td><td>ClassMCP (MCP) + Classpresso (post-build) auto-included in CSS profiles</td></tr>
@@ -1269,13 +1419,13 @@ npx @rulecatch/ai-pooler monitor --no-api-key</code></pre>
           <table class="port-table">
             <thead><tr><th>Use Case</th><th>Stack</th><th>Profile</th></tr></thead>
             <tbody>
-              <tr><td>SPA Dashboard</td><td>Vite + React + Fastify + MongoDB</td><td><code>default</code></td></tr>
+              <tr><td>SPA Dashboard</td><td>Vite + React + Fastify + StrictDB</td><td><code>default</code></td></tr>
               <tr><td>REST API (Node.js)</td><td>Fastify + PostgreSQL</td><td><code>api</code> + <code>postgres</code></td></tr>
               <tr><td>Go Microservice</td><td>Gin + PostgreSQL</td><td><code>go</code> + <code>postgres</code></td></tr>
               <tr><td>Python API</td><td>FastAPI + PostgreSQL</td><td><code>python-api</code></td></tr>
               <tr><td>Vue SPA</td><td>Vue 3 + Vite + Tailwind</td><td><code>vue</code></td></tr>
-              <tr><td>Nuxt Full-Stack</td><td>Nuxt + MongoDB + Docker</td><td><code>nuxt</code></td></tr>
-              <tr><td>SvelteKit Full-Stack</td><td>SvelteKit + MongoDB + Docker</td><td><code>sveltekit</code></td></tr>
+              <tr><td>Nuxt Full-Stack</td><td>Nuxt + StrictDB + Docker</td><td><code>nuxt</code></td></tr>
+              <tr><td>SvelteKit Full-Stack</td><td>SvelteKit + StrictDB + Docker</td><td><code>sveltekit</code></td></tr>
               <tr><td>Angular App</td><td>Angular + Tailwind</td><td><code>angular</code></td></tr>
               <tr><td>Django Web App</td><td>Django + PostgreSQL + Docker</td><td><code>django</code></td></tr>
               <tr><td>Content Site</td><td>Astro or SvelteKit</td><td><code>static-site</code></td></tr>
@@ -1333,7 +1483,7 @@ npx @rulecatch/ai-pooler monitor --no-api-key</code></pre>
         <div class="skill-detail-block">
           <h3>Code Review Skill</h3>
           <p><strong>Triggers:</strong> <code>review</code>, <code>audit</code>, <code>check code</code>, <code>security review</code></p>
-          <p>A systematic review checklist that covers security (OWASP, input validation, CORS, rate limiting), TypeScript quality (no <code>any</code>, explicit return types, strict mode), error handling (no swallowed errors, user-facing messages), performance (N+1 queries, memory leaks, pagination), and architecture compliance (database wrapper, API versioning, service separation).</p>
+          <p>A systematic review checklist that covers security (OWASP, input validation, CORS, rate limiting), TypeScript quality (no <code>any</code>, explicit return types, strict mode), error handling (no swallowed errors, user-facing messages), performance (N+1 queries, memory leaks, pagination), and architecture compliance (StrictDB adapter, API versioning, service separation).</p>
           <p>Each issue is reported with severity, location, fix, and <strong>why it matters</strong>.</p>
         </div>
 
@@ -1411,17 +1561,19 @@ expect(result).toBeTruthy();  // too vague</code></pre>
 
       <!-- Deep Dive: Database Wrapper -->
       <section id="database-wrapper">
-        <h2>Database Wrapper &mdash; Production MongoDB</h2>
-        <p>The starter kit includes a <strong>production-grade MongoDB wrapper</strong> at <code>src/core/db/index.ts</code> using the native driver (no Mongoose, no ODMs). It enforces every best practice that prevents the most common database failures in AI-assisted development.</p>
+        <h2>Database Wrapper &mdash; StrictDB (Unified Driver)</h2>
+        <p>The starter kit includes a <strong>production-grade unified StrictDB adapter</strong> at <code>src/core/db/index.ts</code> supporting MongoDB, PostgreSQL, MySQL, MSSQL, SQLite, and Elasticsearch. It enforces every best practice that prevents the most common database failures in AI-assisted development.</p>
 
         <h3>The Absolute Rule</h3>
-        <p><strong>ALL database access goes through <code>src/core/db/index.ts</code>. No exceptions.</strong> Never create <code>new MongoClient()</code> anywhere else. Never import <code>mongodb</code> directly in business logic.</p>
+        <p><strong>ALL database access goes through <code>src/core/db/index.ts</code>. No exceptions.</strong> Never create direct database clients anywhere else. Never import database drivers directly in business logic.</p>
 
-        <pre class="language-typescript"><code class="language-typescript">// CORRECT — import from the centralized wrapper
+        <pre class="language-typescript"><code class="language-typescript">// CORRECT — import from the StrictDB adapter
 import { queryOne, insertOne, updateOne } from '@/core/db/index.js';
 
 // WRONG — NEVER do this
-import { MongoClient } from 'mongodb';  // FORBIDDEN outside src/core/db/</code></pre>
+import { StrictDB } from 'strictdb';       // FORBIDDEN outside src/core/db/
+import { MongoClient } from 'mongodb';     // FORBIDDEN outside src/core/db/
+import { Pool } from 'pg';                 // FORBIDDEN outside src/core/db/</code></pre>
 
         <h3>Reading Data &mdash; Aggregation Only</h3>
         <pre class="language-typescript"><code class="language-typescript">// Single document (automatic $limit: 1)
@@ -1471,8 +1623,8 @@ await bulkOps('sessions', [
           </table>
         </div>
 
-        <h3>Smart NoSQL Injection Sanitization</h3>
-        <p>All query inputs are automatically sanitized to prevent NoSQL injection. The sanitizer uses an <strong>allowlist</strong> of known-safe MongoDB query operators &mdash; standard operators pass through while dangerous ones are stripped.</p>
+        <h3>Built-in Sanitization and Guardrails</h3>
+        <p>All query inputs are automatically sanitized. The sanitizer uses an <strong>allowlist</strong> of known-safe query operators &mdash; standard operators pass through while dangerous ones are stripped.</p>
 
         <div class="port-table-wrapper">
           <table class="port-table">
@@ -1499,7 +1651,7 @@ await bulkOps('sessions', [
           </table>
         </div>
 
-        <p>This means standard MongoDB queries <strong>just work</strong> without any special options:</p>
+        <p>This means standard queries <strong>just work</strong> without any special options:</p>
 
         <pre class="language-typescript"><code class="language-typescript">// All of these work by default — no special options needed:
 const entries = await queryMany('logs', [
@@ -1517,10 +1669,10 @@ const latest = await queryOne('events', {
 // { $where: 'this.isAdmin' }     → stripped (JS execution)
 // { $function: { body: '...' } } → stripped (JS execution)</code></pre>
 
-        <p>Disable sanitization entirely with <code>DB_SANITIZE_INPUTS=false</code> in <code>.env</code> or <code>sanitize = false</code> in <code>claude-mastery-project.conf</code>.</p>
+        <p>Disable sanitization entirely with <code>sanitize: false</code> in <code>StrictDB.create()</code> config or <code>sanitize = false</code> in <code>claude-mastery-project.conf</code>.</p>
 
         <h3><code>{ trusted: true }</code> &mdash; Escape Hatch</h3>
-        <p>If you need an operator not in the allowlist, <code>queryOne()</code>, <code>queryMany()</code>, and <code>count()</code> accept <code>{ trusted: true }</code> to skip sanitization entirely. This should be <strong>rare</strong> &mdash; if you use it frequently, add the operator to <code>SAFE_MONGO_OPERATORS</code> in <code>src/core/db/index.ts</code> instead.</p>
+        <p>If you need an operator not in the allowlist, <code>queryOne()</code>, <code>queryMany()</code>, and <code>count()</code> accept <code>{ trusted: true }</code> to skip sanitization entirely. This should be <strong>rare</strong> &mdash; if you use it frequently, add the operator to <code>SAFE_OPERATORS</code> in <code>src/core/db/index.ts</code> instead.</p>
 
         <pre class="language-typescript"><code class="language-typescript">// Only needed for operators NOT in the allowlist:
 const results = await queryMany('collection', pipeline, { trusted: true });
@@ -1538,7 +1690,7 @@ const one = await queryOne('collection', match, { trusted: true });</code></pre>
           <div class="check-before-card">
             <h4>When NOT to use it</h4>
             <ul>
-              <li>Standard MongoDB operators (<code>$gte</code>, <code>$in</code>, <code>$regex</code>, etc.) &mdash; these work by default</li>
+              <li>Standard operators (<code>$gte</code>, <code>$in</code>, <code>$regex</code>, etc.) &mdash; these work by default</li>
               <li>Raw user input flows directly into <code>$match</code> without validation</li>
             </ul>
           </div>
@@ -1546,7 +1698,7 @@ const one = await queryOne('collection', match, { trusted: true });</code></pre>
 
         <h3>Additional Features</h3>
         <ul>
-          <li><strong>Singleton per URI</strong> &mdash; same URI always returns the same client, prevents pool exhaustion</li>
+          <li><strong>Singleton per URI</strong> &mdash; same <code>STRICTDB_URI</code> always returns the same client, prevents pool exhaustion</li>
           <li><strong>Next.js hot-reload safe</strong> &mdash; persists connections via <code>globalThis</code> during development</li>
           <li><strong>Transaction support</strong> &mdash; <code>withTransaction()</code> for multi-document atomic operations</li>
           <li><strong>Change Stream access</strong> &mdash; <code>rawCollection()</code> for real-time event processing</li>
@@ -1590,7 +1742,7 @@ export default {
         </div>
 
         <p>Then register in <code>scripts/db-query.ts</code> and run: <code>npx tsx scripts/db-query.ts find-expired-sessions</code></p>
-        <p>Every query uses the MongoDB wrapper &mdash; same connection pool, same patterns, same rules. When you're done exploring, just delete the file and its registry entry.</p>
+        <p>Every query uses the StrictDB adapter &mdash; same connection pool, same patterns, same rules. When you're done exploring, just delete the file and its registry entry.</p>
 
         <h3>Content Builder &mdash; <code>scripts/build-content.ts</code></h3>
         <p>A config-driven Markdown-to-HTML article builder. Write content in <code>content/</code> as Markdown, register it in <code>scripts/content.config.json</code>, and build fully SEO-ready static HTML pages with one command.</p>
@@ -1690,7 +1842,7 @@ pnpm content:dry-run            # Preview what would build</code></pre>
             </ul>
             <pre class="language-text"><code class="language-text">## If You Are About To...
 - Add an endpoint to the wrong service → STOP. Check the table above.
-- Create a direct database connection → STOP. Use the wrapper.
+- Create a direct database connection → STOP. Use StrictDB.
 - Skip TypeScript for a quick fix → STOP. TypeScript is non-negotiable.
 - Deploy without tests → STOP. Write tests first.</code></pre>
           </div>
@@ -1701,7 +1853,7 @@ pnpm content:dry-run            # Preview what would build</code></pre>
             <p>Architectural Decision Records (ADRs) that document <strong>why</strong> you chose X over Y. Includes a template and two starter decisions:</p>
             <ul>
               <li><strong>ADR-001: TypeScript Over JavaScript</strong> &mdash; AI needs explicit type contracts to avoid guessing</li>
-              <li><strong>ADR-002: Centralized Database Wrapper</strong> &mdash; prevents connection pool exhaustion</li>
+              <li><strong>ADR-002: Unified StrictDB Adapter</strong> &mdash; prevents connection pool exhaustion</li>
             </ul>
             <p>Each ADR has: Context, Decision, Alternatives Considered (with pros/cons table), and Consequences.</p>
           </div>
@@ -1894,7 +2046,7 @@ pwd
 
           <div class="global-config-item">
             <h4>Coding Standards</h4>
-            <p>Error handling requirements, testing standards, quality gates, database wrapper pattern &mdash; all enforced across every project.</p>
+            <p>Error handling requirements, testing standards, quality gates, StrictDB adapter pattern &mdash; all enforced across every project.</p>
           </div>
 
           <div class="global-config-item">
@@ -1948,7 +2100,7 @@ try {
         <h3>Plan Mode &mdash; Named Steps + Replace, Don't Append</h3>
         <p>Every plan step MUST have a unique, descriptive name so you can reference it unambiguously:</p>
         <pre class="language-text"><code class="language-text">Step 1 (Project Setup): Initialize repo with TypeScript
-Step 2 (Database Layer): Create MongoDB wrapper
+Step 2 (Database Layer): Configure StrictDB adapter
 Step 3 (Auth System): Implement JWT authentication</code></pre>
         <p>When modifying a plan, Claude tends to append instead of replacing &mdash; creating contradictions. The rules:</p>
         <ul>

@@ -142,8 +142,7 @@ After the infrastructure diff above, also check for feature source files to upda
 1. Read `$TARGET/.claude/features.json`
 2. **If exists:** extract the list of installed features from `features` object
 3. **If missing (legacy project):** auto-detect features from file presence:
-   - `src/core/db/index.ts` exists → feature `mongo`
-   - `src/core/db/sql.ts` exists → feature `postgres`
+   - `src/core/db/index.ts` exists → feature `mongo` (or `postgres` — StrictDB handles both)
    - `vitest.config.ts` exists → feature `vitest`
    - `playwright.config.ts` exists → feature `playwright`
    - `scripts/build-content.ts` exists → feature `content`

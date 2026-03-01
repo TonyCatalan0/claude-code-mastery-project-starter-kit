@@ -91,7 +91,7 @@ Run through EVERY check below. For each violation found, note the line number, w
 
 ### 1F. Database Access (Rule 3)
 
-- No direct `MongoClient` or `mongodb` imports outside `src/core/db/`
+- No direct `StrictDB`, `MongoClient`, or database driver imports outside `src/core/db/`
 - All queries go through the wrapper (`queryOne`, `queryMany`, `insertOne`, etc.)
 - No `find()` or `findOne()` — use aggregation via the wrapper
 - Counters use `$inc` not read-modify-write
@@ -147,7 +147,7 @@ TypeScript fixes:
 Other fixes:
   - Lines 23-25: sequential awaits → Promise.all (independent)
   - Line 67: swallowed error → proper logging + rethrow
-  - Line 112: direct MongoClient import → use wrapper
+  - Line 112: direct database driver import → use wrapper
   - Lines 200-215: dead code (commented out old auth) → remove
 
 Blast radius: imported by 3 files (server.ts, user-routes.ts, admin.ts)
