@@ -3,8 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Claude Code Starter Kit - The Definitive Starting Point</title>
-  <meta name="description" content="A ready-to-use project template with every best practice from the Claude Code Mastery Guide series. Clone and start building.">
+  <title>Claude Code Starter Kit — MDD Workflow &amp; TypeScript Best Practices</title>
+  <meta name="description" content="The Claude Code Starter Kit with built-in MDD (Manual-First Development) workflow. 26 commands, 9 hooks, TypeScript-first quality gates. The definitive starting point for Claude Code projects.">
+
+  <link rel="canonical" href="https://thedecipherist.github.io/claude-code-mastery-project-starter-kit/">
+  <meta name="author" content="TheDecipherist">
+  <meta name="robots" content="index, follow">
+  <meta name="keywords" content="claude code, claude code starter kit, mdd, manual-first development, manual first development, claude code mastery, claude token reduction, reduce tokens claude, claude context window, claude context optimization, AI development tools, typescript starter kit">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://thedecipherist.github.io/claude-code-mastery-project-starter-kit/">
+  <meta property="og:title" content="Claude Code Starter Kit — MDD Workflow &amp; TypeScript Best Practices">
+  <meta property="og:description" content="The Claude Code Starter Kit with built-in MDD (Manual-First Development) workflow. 26 commands, 9 hooks, TypeScript-first quality gates. The definitive starting point for Claude Code projects.">
+  <meta property="og:image" content="https://thedecipherist.github.io/claude-code-mastery-project-starter-kit/thedecipherist.png">
+  <meta property="og:site_name" content="Claude Code Starter Kit">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Claude Code Starter Kit — MDD Workflow &amp; TypeScript Best Practices">
+  <meta name="twitter:description" content="The Claude Code Starter Kit with built-in MDD (Manual-First Development) workflow. 26 commands, 9 hooks, TypeScript-first. Clone and start building.">
+  <meta name="twitter:image" content="https://thedecipherist.github.io/claude-code-mastery-project-starter-kit/thedecipherist.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Claude Code Starter Kit",
+    "alternateName": ["Claude Code MDD Starter Kit", "MDD Starter Kit"],
+    "description": "The Claude Code Starter Kit with built-in MDD (Manual-First Development) workflow. 26 slash commands, 9 hooks, TypeScript-first quality gates. The definitive starting point for Claude Code projects.",
+    "url": "https://thedecipherist.github.io/claude-code-mastery-project-starter-kit/",
+    "author": {
+      "@type": "Person",
+      "name": "TheDecipherist",
+      "url": "https://thedecipherist.com"
+    },
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Cross-platform",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "downloadUrl": "https://github.com/TheDecipherist/claude-code-mastery-project-starter-kit",
+    "codeRepository": "https://github.com/TheDecipherist/claude-code-mastery-project-starter-kit",
+    "license": "https://opensource.org/licenses/MIT",
+    "keywords": "claude code, claude code starter kit, mdd, manual-first development, manual first development, claude token reduction, claude context window, TypeScript, AI development, developer tools"
+  }
+  </script>
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="thedecipherist.png">
@@ -139,7 +183,7 @@
     <div class="container hero-content">
       <div class="hero-badge">Based on Claude Code Mastery V1&ndash;V5</div>
       <h1>The Definitive Starting Point<br>for Claude Code Projects</h1>
-      <p class="hero-subtitle">A ready-to-use project template with every best practice baked in. Stop reading 4,000+ lines of guides &mdash; clone this and start building.</p>
+      <p class="hero-subtitle">A ready-to-use project template with every best practice baked in, including the MDD (Manual-First Development) workflow. Stop reading 4,000+ lines of guides &mdash; clone this and start building.</p>
       <div class="hero-actions">
         <a href="https://github.com/TheDecipherist/claude-code-mastery-project-starter-kit" target="_blank" rel="noopener" class="btn btn-primary">
           <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -280,6 +324,14 @@
 
         <div class="callout" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.05)); border-left: 4px solid #3b82f6; padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 2rem;">
           <strong>Parallel workflows supported.</strong> <code>/mdd</code> now asks if you want to work in an isolated worktree &mdash; run multiple <code>/mdd</code> sessions simultaneously, each in its own directory and branch. Use <code>/worktree</code> for complete isolation.
+        </div>
+
+        <div id="token-reduction" style="background: var(--bg-secondary); border: 1px solid rgba(139, 92, 246, 0.3); border-left: 4px solid #8b5cf6; padding: 1.5rem 1.75rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+          <h3 style="margin-top: 0; color: var(--text-primary);">Stop Reducing Tokens. Start Clarifying Context.</h3>
+          <p>I&rsquo;ve tried every approach to improve Claude&rsquo;s output. Context managers, prompt compression, elaborate system prompts. Then I built MDD, and I haven&rsquo;t needed any of them since. I use MDD in every Claude project I work on now. The difference in results is night and day.</p>
+          <p>Here&rsquo;s what changed my thinking: <strong>token reduction tools solve the wrong problem.</strong> Compressing context means Claude fills the gaps with assumptions. Assumptions become bugs. The more you compress, the more follow-up sessions it takes to fix what Claude misunderstood.</p>
+          <p>MDD does the opposite. One feature doc instead of 40 source files. The <code>.mdd/.startup.md</code> snapshot orients Claude in ~100&ndash;200 tokens at the start of every session &mdash; not because we removed information, but because we made it <em>dense</em>. Every token earns its place. Claude reads less, understands more, and produces better output on the first pass.</p>
+          <p style="margin-bottom: 0;"><strong>Token reduction is a side effect of clarity. It is not the goal. The goal is results that don&rsquo;t require three sessions to fix.</strong></p>
         </div>
 
         <h3>What is MDD?</h3>
