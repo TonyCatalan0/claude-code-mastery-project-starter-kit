@@ -34,6 +34,7 @@ Parse `$ARGUMENTS` to determine the mode:
 
 - If arguments start with `audit` → **Audit Mode** (jump to Phase A)
 - If arguments start with `status` → **Status Mode** (jump to Phase S)
+- If arguments start with `note` → **Note Mode** (jump to Phase N)
 - If arguments are empty → ask the user what they want to do
 - Otherwise → **Build Mode** (the default — jump to Phase 1)
 
@@ -68,7 +69,72 @@ Then ask the user targeted questions using AskUserQuestion. Ask ALL relevant que
 
 Wait for all answers before proceeding.
 
-### Phase 2 — Write the MDD Documentation
+### Phase 2 — Data Flow & Impact Analysis
+
+**Skip condition:** If `.mdd/docs/` has no existing files AND `src/` has fewer than 5 source files, skip this phase entirely and note: "Greenfield detected — skipping data flow analysis." Then jump to Phase 3.
+
+Otherwise, use the answers from Phase 1 (depends_on, endpoints, models) to identify which existing files to read. Do NOT scan blindly — read only what the feature will touch or extend.
+
+#### Step 2a — Identify Touched Files
+
+From Phase 1 answers:
+- Which existing features does this depend on? → Read their `source_files` from `.mdd/docs/`
+- Which endpoints or models does this extend? → Grep `src/` for those names
+- Which TypeScript types does this use? → Read `src/types/`
+
+Read each identified file. The goal is to **understand data flows**, not audit code quality.
+
+#### Step 2b — Trace Each Data Value
+
+For every piece of data the new feature will **consume, transform, or display**, document the full chain:
+
+1. **Backend origin** — where is this value computed? What formula or logic? Note the file and line number.
+2. **API transport** — what is the exact shape in the API response? Is it typed correctly?
+3. **Frontend consumption** — how does the UI receive and use this value? Is there any transformation between the API response and what is displayed?
+4. **Parallel computations** — is this same concept computed anywhere else in the codebase? Does it use the same logic?
+
+Write findings to `.mdd/audits/flow-<feature-slug>-<date>.md` as you go. Do not accumulate in memory.
+
+#### Step 2c — Impact Analysis
+
+For each endpoint or function the feature will **modify**, grep for all existing usages:
+
+```bash
+grep -r "<endpoint-or-function-name>" src/ --include="*.ts" --include="*.tsx" -l
+```
+
+List every file that also consumes what this feature changes. These files may break silently after the change.
+
+#### Step 2d — Gate
+
+Present findings to the user before writing any documentation:
+
+```
+🔍 Data Flow Analysis — <feature-name>
+
+Values this feature touches:
+  <field-name>
+    Computed:  <file>:<line> — <brief description of logic>
+    Transport: <HTTP method> <route> → <TypeScript type>.<field>
+    Consumed:  <component/file> (<transformation if any>)
+
+Consistency issues:
+  ✅ None found
+  — OR —
+  ⚠️  HIGH: <description of divergence between parallel computations>
+
+Impact:
+  Endpoints/functions modified: <list>
+  Also consumed by: <list of other files/views>
+
+Data flow doc: .mdd/audits/flow-<feature-slug>-<date>.md
+```
+
+Ask the user: **"Proceed with documentation? (yes / adjust scope based on findings / stop)"**
+
+**This gate is mandatory.** Do not proceed to Phase 3 until the user confirms. If consistency issues were found, discuss whether to fix them as part of this feature or track them as pre-existing known issues first.
+
+### Phase 3 — Write the MDD Documentation
 
 Create the feature documentation file at `.mdd/docs/<NN>-<feature-name>.md`.
 
@@ -90,6 +156,7 @@ models:
   - <database collections if applicable>
 test_files:
   - <test files that will be created>
+data_flow: <path to .mdd/audits/flow-*.md, or "greenfield" if skipped>
 known_issues: []
 ---
 
@@ -115,6 +182,10 @@ known_issues: []
 
 <Validation rules, state machines, invariants, edge cases.>
 
+## Data Flow
+
+<For each value this feature consumes or displays: backend computation → API transport → frontend consumption → any UI transformation. "Greenfield" if no existing code was analyzed.>
+
 ## Dependencies
 
 <What this feature requires from other features. List by documentation ID.>
@@ -126,13 +197,15 @@ known_issues: []
 
 **CRITICAL:** This documentation is the source of truth. Everything that follows is generated FROM this doc. Take time to make it complete and accurate.
 
+**After writing the feature doc**, trigger the `.mdd/.startup.md` rebuild (same logic as in Status Mode — rebuild auto-generated zone, preserve Notes zone) so the Features list stays current.
+
 Show the completed doc to the user and ask: **"Does this accurately describe what you want to build? Anything to add or change?"**
 
 Wait for confirmation before proceeding.
 
-### Phase 3 — Generate Test Skeletons
+### Phase 4 — Generate Test Skeletons
 
-Read the documentation file created in Phase 2. From the endpoints, business rules, and edge cases documented, generate test skeletons.
+Read the documentation file created in Phase 3. From the endpoints, business rules, and edge cases documented, generate test skeletons.
 
 **Create test file at:** `tests/unit/<feature-name>.test.ts`
 
@@ -175,7 +248,7 @@ These tests will FAIL until implementation is complete.
 That's the point — they're the finish line.
 ```
 
-### Phase 4 — Present the Build Plan
+### Phase 5 — Present the Build Plan
 
 Before writing any implementation code, present a clear plan:
 
@@ -210,7 +283,7 @@ Ready to build? (yes / modify plan / stop here)
 
 Wait for user confirmation.
 
-### Phase 5 — Implement (Test-Driven)
+### Phase 6 — Implement (Test-Driven)
 
 For each step in the plan:
 
@@ -235,7 +308,7 @@ pnpm typecheck     # Must pass
 pnpm test:unit     # All tests must pass (including pre-existing)
 ```
 
-### Phase 6 — Verify + Report
+### Phase 7 — Verify + Report
 
 After implementation is complete:
 
@@ -250,6 +323,7 @@ Present the final report:
 ✅ MDD Complete: <Feature Name>
 
 Documentation: .mdd/docs/<NN>-<feature-name>.md
+Data flow doc: .mdd/audits/flow-<feature-slug>-<date>.md (or "greenfield")
 Files created: <list>
 Tests: <N>/<N> passing
 Typecheck: Clean
@@ -323,6 +397,8 @@ Estimated fix time: <N> hours (traditional) → <N> minutes (MDD)
 Fix all now? (yes / review report first / fix only critical+high)
 ```
 
+**After the report is written**, trigger the `.mdd/.startup.md` rebuild (same logic as in Status Mode — rebuild auto-generated zone, preserve Notes zone) so the Last Audit block reflects the new findings regardless of whether the user proceeds with fixes.
+
 If user says yes (or selects a subset):
 
 ### Phase A5 — Fix
@@ -334,6 +410,8 @@ Read the findings report. For each finding to fix:
 4. Run tests after each fix group
 
 Report progress per finding. Update documentation `known_issues` to remove fixed items.
+
+**After fixes are complete and results are written to `.mdd/audits/results-*.md`**, trigger the `.mdd/.startup.md` rebuild (same logic as in Status Mode — rebuild auto-generated zone, preserve Notes zone) so the Last Audit block reflects the new numbers.
 
 ---
 
@@ -358,6 +436,53 @@ Quality gates:    <N> files over 300 lines
 
 Run `/mdd audit` to refresh or `/mdd <feature>` to build something new.
 ```
+
+### Rebuild `.mdd/.startup.md`
+
+After collecting status, rebuild the auto-generated zone of `.mdd/.startup.md`:
+
+1. Read the current `.mdd/.startup.md` (if it exists) and extract the **Notes section** — everything after the `---` divider line. This is the user's append-only zone and must be preserved exactly.
+2. Rebuild the **auto-generated section** (everything above `---`) with fresh data:
+   - `Generated: <YYYY-MM-DD>` (date only, no time)
+   - `Branch:` from `git branch --show-current`
+   - `Stack:` from `CLAUDE.md` or `claude-mastery-project.conf` if detectable, otherwise `(unknown)`
+   - `Features Documented:` sorted list of `.mdd/docs/*.md` filenames with status if detectable from frontmatter
+   - `Last Audit:` from the most recent `.mdd/audits/report-*.md` — extract findings/fixed/open counts
+   - `Rules Summary:` static block (does not change)
+3. Write the rebuilt auto-generated section + `---` divider + preserved Notes section back to `.mdd/.startup.md`
+4. If no `.mdd/.startup.md` exists yet, create it fresh using the template with an empty Notes section
+
+---
+
+## NOTE MODE — `/mdd note`
+
+Triggered when arguments start with `note`. Three subcommands:
+
+```
+/mdd note "your note here"    -- append a timestamped note to .startup.md
+/mdd note list                -- print only the Notes section
+/mdd note clear               -- wipe the Notes section (asks for confirmation)
+```
+
+### `/mdd note "your note here"` — Append
+
+1. Read `.mdd/.startup.md`. If it does not exist, create it first using the startup template (same as generated by `/mdd status` with placeholder values), then continue.
+2. Find the `---` divider line.
+3. Append below the divider: `- [YYYY-MM-DD] your note here` (use today's date).
+4. Write the file back.
+5. Print: `Note added to .mdd/.startup.md`
+
+### `/mdd note list` — List Notes
+
+1. Read `.mdd/.startup.md`.
+2. Print everything after the `---` divider (the Notes section).
+3. If the Notes section is empty or contains only the placeholder text, print: `(no notes yet)`
+
+### `/mdd note clear` — Clear Notes
+
+1. Ask the user: `Clear all notes in .mdd/.startup.md? This cannot be undone. (yes/no)`
+2. If yes: rewrite the Notes section (everything after `---`) as `(no notes)`
+3. If no: abort with `Cancelled.`
 
 ---
 
