@@ -129,7 +129,7 @@ Every phase reads the output of the previous phase, compressing context further 
 | 🔧 **Fix** | Execute pre-planned fixes with tests |
 | ✅ **Verify** | Tests pass, types check, documentation updated |
 
-### Usage — One Command, Three Modes
+### Usage — One Command, Eight Modes
 
 ```bash
 # Build a new feature (Analyze → Document → Test skeletons → Plan → Implement → Verify)
@@ -139,8 +139,25 @@ Every phase reads the output of the previous phase, compressing context further 
 /mdd audit
 /mdd audit database    # audit a specific section
 
-# Check MDD status and rebuild .mdd/.startup.md
+# Check MDD status and rebuild .mdd/.startup.md (includes drift summary)
 /mdd status
+
+# Detect code that changed outside MDD — catch doc drift before it silently spreads
+/mdd scan
+
+# Update an existing feature doc after code has changed
+/mdd update 04            # by number
+/mdd update content-builder
+
+# Generate docs from undocumented code, or regenerate an existing doc
+/mdd reverse-engineer src/handlers/payments.ts
+/mdd reverse-engineer 07  # regenerate doc 07 by comparing code vs existing doc
+
+# Show cross-feature dependency graph with broken/risky dep warnings
+/mdd graph
+
+# Retire a feature cleanly — archive doc, flag dependents, optionally clean up files
+/mdd deprecate 03
 
 # Append a note to .mdd/.startup.md (survives compaction)
 /mdd note "just switched to PostgreSQL"
@@ -148,9 +165,19 @@ Every phase reads the output of the previous phase, compressing context further 
 /mdd note clear         # wipe notes section
 ```
 
-**Build mode** (`/mdd <description>`) follows 7 phases: Understand → Analyze → Document → Test Skeletons → Plan → Implement → Verify. Phase 2 is a mandatory **Data Flow & Impact Analysis** gate — before writing a single line of docs, Claude reads the existing code the feature will touch, traces every data value end-to-end (backend computation → API transport → frontend consumption → UI transformation), checks for parallel computations of the same concept, and presents findings before proceeding. Skipped automatically on greenfield projects. Tests are generated *before* code — they define the finish line. Claude presents a build plan with named steps and time estimates, then waits for your approval before writing any code.
+**Build mode** (`/mdd <description>`) follows 7 phases: Understand → Analyze → Document → Test Skeletons → Plan → Implement → Verify. Phase 2 is a mandatory **Data Flow & Impact Analysis** gate — before writing a single line of docs, Claude reads the existing code the feature will touch, traces every data value end-to-end (backend computation → API transport → frontend consumption → UI transformation), checks for parallel computations of the same concept, and presents findings before proceeding. Skipped automatically on greenfield projects. Questions are context-adaptive — tooling tasks skip the database and API questions automatically. Tests are generated *before* code — they define the finish line. Claude presents a build plan with named steps and time estimates, then waits for your approval before writing any code.
 
 **Audit mode** (`/mdd audit`) runs a complete security and quality audit across 5 phases: (A1) Scope — reads all `.mdd/docs/` files to build the feature map, auto-generates docs if none exist; (A2) Read + Notes — reads all source files and writes incremental notes every 2 features so findings survive context compaction; (A3) Analyze — reads only the notes file to produce a severity-rated findings report; (A4) Present — shows top findings with effort estimates and asks what to fix; (A5) Fix — applies fixes, writes tests, and updates documentation. Auto-branches to `fix/mdd-audit-<date>` before making any changes.
+
+**Scan mode** (`/mdd scan`) detects documentation drift — features whose source files have changed since the last MDD session. Uses `git log --after="<last_synced>"` for each registered source file. Shows ✅ in sync / ⚠️ drifted / ❌ broken reference / ❓ untracked. Saves a full drift report to `.mdd/audits/scan-<date>.md`.
+
+**Update mode** (`/mdd update <feature-id>`) re-syncs an existing feature doc after code has changed. Reads the current source files, diffs them against the doc, presents "what changed", and rewrites only the affected sections. Appends new test skeletons for newly documented behaviors without touching existing tests. Updates `last_synced` in frontmatter.
+
+**Reverse-engineer mode** (`/mdd reverse-engineer [path|feature-id]`) generates MDD documentation from code. Works on undocumented files (new doc) or existing docs (regenerate + compare). Always shows a diff in regenerate mode so you can merge rather than blindly overwrite. Discloses limitations — business intent and implicit constraints must be manually reviewed.
+
+**Graph mode** (`/mdd graph`) renders an ASCII dependency map from `depends_on` fields. Flags broken dependencies (deprecated features still depended on), risky dependencies (complete features depending on in-progress ones), and orphans (no connections either way).
+
+**Deprecate mode** (`/mdd deprecate <feature-id>`) retires a feature: sets `status: deprecated`, moves the doc to `.mdd/docs/archive/`, adds known-issue warnings to all dependents, and optionally deletes source and test files (asks separately for each).
 
 ### The `.mdd/` Directory
 
@@ -159,14 +186,16 @@ All MDD artifacts live in a single dotfile directory, gitignored by default:
 ```
 .mdd/
 ├── docs/                             # Feature documentation (one per feature)
-│   ├── 01-<feature-name>.md          # auto-numbered, YAML frontmatter + data_flow: field
+│   ├── 01-<feature-name>.md          # auto-numbered, YAML frontmatter + last_synced/status/phase
 │   ├── 02-<feature-name>.md
-│   └── ...
+│   └── archive/                      # Deprecated feature docs (set by /mdd deprecate)
 ├── audits/                           # Audit artifacts (all gitignored)
 │   ├── flow-<feature>-<date>.md      # Data flow analysis written during Phase 2
 │   ├── notes-<date>.md               # Raw reading notes (Phase A2, written every 2 features)
 │   ├── report-<date>.md              # Severity-rated findings report (Phase A3)
-│   └── results-<date>.md             # Before/after fix summary (Phase A5)
+│   ├── results-<date>.md             # Before/after fix summary (Phase A5)
+│   ├── scan-<date>.md                # Drift report from /mdd scan
+│   └── graph-<date>.md               # Dependency graph from /mdd graph
 └── .startup.md                       # Auto-generated session context (injected at startup)
 ```
 
@@ -817,11 +846,16 @@ Invoke these with `/command` in any Claude Code session. Each command is a markd
 
 ### `/mdd`
 
-The core MDD workflow command. Three modes in one:
+The core MDD workflow command. Eight modes in one:
 
-- **`/mdd <feature description>`** — Build mode. Interactive interview → documentation → test skeletons → named build plan → implementation → verification. Tests are generated before code. Claude presents a plan with time estimates and waits for approval.
+- **`/mdd <feature description>`** — Build mode. Context-adaptive interview → documentation → test skeletons → named build plan → implementation → verification. Tests are generated before code. Claude presents a plan with time estimates and waits for approval.
 - **`/mdd audit [section]`** — Audit mode. Reads all source files, writes incremental notes (survives compaction), produces a severity-rated findings report, and fixes everything. Works on the whole project or a specific section.
-- **`/mdd status`** — Quick overview of feature docs, last audit date, test coverage, open findings, and quality gate violations.
+- **`/mdd status`** — Quick overview of feature docs, last audit date, test coverage, open findings, quality gate violations, and a lightweight drift summary.
+- **`/mdd scan`** — Drift detection. Uses `git log` to find source files that changed since each feature doc's `last_synced` date. Flags drifted, broken, and untracked features.
+- **`/mdd update <feature-id>`** — Re-sync an existing feature doc after code changes. Diffs code vs doc, rewrites affected sections, appends new test skeletons, updates `last_synced`.
+- **`/mdd reverse-engineer [path|id]`** — Generate MDD docs from existing code, or regenerate + compare against an existing doc. Always shows diff in regenerate mode.
+- **`/mdd graph`** — ASCII dependency map from `depends_on` fields, with broken and risky dependency warnings.
+- **`/mdd deprecate <feature-id>`** — Archive a feature: move doc to `.mdd/docs/archive/`, flag dependents, optionally delete source and test files.
 
 All artifacts are stored in `.mdd/` (docs in `.mdd/docs/`, audit reports in `.mdd/audits/`). See the [MDD Workflow](#mdd-workflow--manual-first-development--new) section above for full details and real results.
 

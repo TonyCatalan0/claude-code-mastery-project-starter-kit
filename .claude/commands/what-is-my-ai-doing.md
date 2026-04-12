@@ -19,7 +19,7 @@ Tell the user:
 The AI-Pooler monitor runs in a SEPARATE terminal window.
 Open a new terminal and run:
 
-  npx @rulecatch/ai-pooler monitor --no-api-key
+  npx @rulecatch/ai-pooler@latest monitor --no-api-key
 
 This is free monitor mode — no API key, no account, no setup.
 It shows you a live view of:

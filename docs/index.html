@@ -316,7 +316,7 @@
         </div>
 
         <h3>Usage</h3>
-        <p>One command, three modes:</p>
+        <p>One command, eight modes:</p>
 
         <pre><code class="language-bash"># Build a new feature (Analyze → Document → Test skeletons → Plan → Implement → Verify)
 /mdd user authentication with JWT tokens
@@ -325,8 +325,24 @@
 /mdd audit
 /mdd audit database    # audit a specific section
 
-# Check MDD status (docs, tests, findings, quality gates)
-/mdd status</code></pre>
+# Check MDD status — includes lightweight drift summary
+/mdd status
+
+# Detect doc drift: source files changed outside MDD since last sync
+/mdd scan
+
+# Update an existing feature doc after code changed
+/mdd update 04
+
+# Generate docs from code, or regenerate + compare an existing doc
+/mdd reverse-engineer src/handlers/payments.ts
+/mdd reverse-engineer 07
+
+# Show ASCII dependency graph with broken/risky dep warnings
+/mdd graph
+
+# Archive a deprecated feature cleanly
+/mdd deprecate 03</code></pre>
 
         <h3>Build Mode &mdash; New Features</h3>
         <p>When you run <code>/mdd &lt;feature description&gt;</code>, Claude follows a structured 7-phase process:</p>
@@ -352,17 +368,28 @@
           <li><strong>Fix</strong> &mdash; Applies fixes from the report, writes tests, updates documentation</li>
         </ol>
 
+        <h3>New Modes &mdash; Drift Detection &amp; Doc Lifecycle</h3>
+        <ul style="line-height: 1.8;">
+          <li><strong><code>/mdd scan</code></strong> &mdash; Detects documentation drift. Uses <code>git log --after="&lt;last_synced&gt;"</code> on each registered source file to find code that changed outside the MDD workflow. Reports ✅ in sync / ⚠️ drifted / ❌ broken / ❓ untracked. The fix for drift is <code>/mdd update</code>.</li>
+          <li><strong><code>/mdd update &lt;feature-id&gt;</code></strong> &mdash; Re-syncs an existing feature doc after code has changed. Diffs code vs doc, presents what changed, rewrites only the affected sections, appends new test skeletons for new behaviors, and updates <code>last_synced</code> in frontmatter.</li>
+          <li><strong><code>/mdd reverse-engineer [path|id]</code></strong> &mdash; Generates MDD docs from existing code. Works on undocumented files (new doc) or existing docs (regenerate + compare). In regenerate mode, shows old vs new side-by-side so you can merge rather than overwrite.</li>
+          <li><strong><code>/mdd graph</code></strong> &mdash; Renders an ASCII dependency map from <code>depends_on</code> fields. Flags broken dependencies (deprecated features still referenced), risky dependencies (complete features depending on draft/in-progress ones), and orphans.</li>
+          <li><strong><code>/mdd deprecate &lt;feature-id&gt;</code></strong> &mdash; Retires a feature: sets <code>status: deprecated</code>, moves doc to <code>.mdd/docs/archive/</code>, adds known-issue warnings to all dependents, and optionally deletes source and test files (asks separately for each).</li>
+        </ul>
+
         <h3>The <code>.mdd/</code> Directory</h3>
         <p>All MDD artifacts live in a single dotfile directory, gitignored by default:</p>
         <pre><code class="language-bash">.mdd/
 ├── docs/                        # Feature documentation (one per feature)
-│   ├── 01-project-scaffolding.md
+│   ├── 01-project-scaffolding.md  # YAML frontmatter: last_synced, status, phase
 │   ├── 02-profile-system.md
-│   └── ...
+│   └── archive/                 # Deprecated feature docs (/mdd deprecate)
 └── audits/                      # Audit artifacts
     ├── notes-2026-03-01.md      # Raw reading notes
     ├── report-2026-03-01.md     # Structured findings
-    └── results-2026-03-01.md    # Before/after summary</code></pre>
+    ├── results-2026-03-01.md    # Before/after summary
+    ├── scan-2026-04-12.md       # Drift report (/mdd scan)
+    └── graph-2026-04-12.md      # Dependency graph (/mdd graph)</code></pre>
 
         <h3>Real Results: Self-Audit</h3>
         <p>We used MDD to audit this starter kit &mdash; the same methodology the kit teaches. Here's what happened:</p>
@@ -594,7 +621,7 @@ Read CLAUDE.md for full rules. Key rules:
             <h3>Quality &amp; Testing</h3>
             <ul>
               <li><code>/mdd audit</code> <span style="background: #f59e0b; color: #000; font-size: 0.65em; padding: 0.1em 0.4em; border-radius: 4px; vertical-align: middle;">MDD</span></li>
-              <li><code>/mdd status</code> <span style="background: #f59e0b; color: #000; font-size: 0.65em; padding: 0.1em 0.4em; border-radius: 4px; vertical-align: middle;">MDD</span></li>
+              <li><code>/mdd scan</code> <span style="background: #f59e0b; color: #000; font-size: 0.65em; padding: 0.1em 0.4em; border-radius: 4px; vertical-align: middle;">MDD</span></li>
               <li><code>/create-e2e</code></li>
               <li><code>/test-plan</code></li>
             </ul>
