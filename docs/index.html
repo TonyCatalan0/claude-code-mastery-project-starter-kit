@@ -329,16 +329,18 @@
 /mdd status</code></pre>
 
         <h3>Build Mode &mdash; New Features</h3>
-        <p>When you run <code>/mdd &lt;feature description&gt;</code>, Claude follows a structured 6-phase process:</p>
+        <p>When you run <code>/mdd &lt;feature description&gt;</code>, Claude follows a structured 7-phase process:</p>
         <ol style="line-height: 1.8;">
           <li><strong>Understand</strong> &mdash; Reads your architecture, existing docs, asks all questions upfront</li>
-          <li><strong>Document</strong> &mdash; Creates a numbered MDD doc in <code>.mdd/docs/</code> with full YAML frontmatter</li>
-          <li><strong>Test Skeletons</strong> &mdash; Generates failing tests from the documentation (Doc → Test → Code)</li>
+          <li><strong>Analyze</strong> &mdash; <strong>Data Flow &amp; Impact Analysis</strong> (mandatory gate): reads the existing code the feature will touch, traces every data value end-to-end (backend &rarr; API &rarr; frontend &rarr; UI transformation), checks for parallel computations of the same concept, greps for all usages of modified endpoints, and presents findings before documentation begins. Skipped automatically on greenfield projects (&lt;5 source files, no existing MDD docs).</li>
+          <li><strong>Document</strong> &mdash; Creates a numbered MDD doc in <code>.mdd/docs/</code> with full YAML frontmatter including a <code>data_flow:</code> field pointing to the Phase 2 analysis</li>
+          <li><strong>Test Skeletons</strong> &mdash; Generates failing tests from the documentation (Doc &rarr; Test &rarr; Code)</li>
           <li><strong>Plan</strong> &mdash; Presents named steps with time estimates, waits for your approval</li>
           <li><strong>Implement</strong> &mdash; Builds code until tests pass, reports progress per step</li>
           <li><strong>Verify</strong> &mdash; Full test suite, typecheck, documentation updated</li>
         </ol>
         <p>Tests are generated <em>before</em> code. They define the finish line. If a test fails, the implementation gets fixed &mdash; not the test.</p>
+        <p><strong>Why Phase 2 matters:</strong> In a maturing project, the most common class of bug isn&rsquo;t in the new code &mdash; it&rsquo;s in the assumption that existing data is correct and consistent. An AI sees <code>projectedProgress: number</code> on a type and assumes it&rsquo;s ready to use, without tracing <em>how</em> that value was computed. Phase 2 forces that trace to happen before a single line of documentation is written, catching divergent parallel computations before they become UI bugs that take 3 sessions to debug.</p>
 
         <h3>Audit Mode &mdash; Existing Code</h3>
         <p>When you run <code>/mdd audit</code>, Claude runs a complete security and quality audit:</p>

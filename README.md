@@ -143,7 +143,7 @@ Every phase reads the output of the previous phase, compressing context further 
 /mdd status
 ```
 
-**Build mode** (`/mdd <description>`) follows 6 phases: Understand → Document → Test Skeletons → Plan → Implement → Verify. Tests are generated *before* code — they define the finish line. Claude presents a build plan with named steps and time estimates, then waits for your approval before writing any code.
+**Build mode** (`/mdd <description>`) follows 7 phases: Understand → Analyze → Document → Test Skeletons → Plan → Implement → Verify. Phase 2 is a mandatory **Data Flow & Impact Analysis** gate — before writing a single line of docs, Claude reads the existing code the feature will touch, traces every data value end-to-end (backend computation → API transport → frontend consumption → UI transformation), checks for parallel computations of the same concept, and presents findings before proceeding. Skipped automatically on greenfield projects. Tests are generated *before* code — they define the finish line. Claude presents a build plan with named steps and time estimates, then waits for your approval before writing any code.
 
 **Audit mode** (`/mdd audit`) runs a complete security and quality audit. Claude reads all source files, writes incremental notes every 2 features (zero data loss through context compaction), then produces a severity-rated findings report and fixes everything.
 
