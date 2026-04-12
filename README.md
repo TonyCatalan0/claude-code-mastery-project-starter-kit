@@ -188,6 +188,44 @@ All MDD artifacts live in a single dotfile directory, gitignored by default:
 
 The most important technical detail: when Claude reads files during an audit, context will compact. If your findings are only in memory, they're gone. Instead, Claude writes notes to disk every 2 features. If context compacts, it reads the tail of the notes file and picks up where it left off. Zero data loss across 6 complete audit cycles.
 
+### Startup Context -- .mdd/.startup.md
+
+Every time a Claude Code session starts (including after `/clear` and compaction),
+the starter kit injects a compact project snapshot into Claude's context automatically.
+This replaces the expensive habit of Claude reading 40 files to get oriented -- it reads
+one file instead.
+
+The snapshot is stored in `.mdd/.startup.md` and has two zones:
+
+**Auto-generated zone** (above the `---` divider) -- rewritten by `/mdd` commands:
+- Current git branch
+- Stack summary (framework, database, hosting)
+- Features documented in `.mdd/docs/`
+- Last audit results (findings found, fixed, still open)
+- Rules quick-reference
+
+**Notes zone** (below the `---` divider) -- append-only, never overwritten:
+- Your own timestamped annotations added with `/mdd note`
+
+The file is gitignored -- it is machine state, not source code. It regenerates
+automatically as you use MDD.
+
+**Commands:**
+
+```
+/mdd status              -- regenerate .startup.md from current project state
+/mdd note "your note"   -- append a timestamped note
+/mdd note list          -- print only the Notes section
+/mdd note clear         -- wipe the Notes section
+```
+
+**Why this works:**
+
+The SessionStart hook runs on startup, /clear, and compaction. Its only job is:
+`cat .mdd/.startup.md`
+
+One file. ~100-200 tokens. Claude is fully oriented before your first prompt.
+
 ---
 
 ## Featured Packages

@@ -97,6 +97,7 @@
       <div class="toc-header">Contents</div>
       <a href="#whats-included">What's Included</a>
       <a href="#mdd-workflow">MDD Workflow ✨ NEW</a>
+      <a href="#mdd-startup-context">Startup Context</a>
       <a href="#featured-packages">Featured Packages</a>
       <a href="#what-is-this">What Is This?</a>
       <a href="#learning-path">Learning Path</a>
@@ -160,6 +161,7 @@
         <div class="toc-header">Contents</div>
         <a href="#whats-included" class="active">What's Included</a>
         <a href="#mdd-workflow" class="nav-new">MDD Workflow ✨ NEW</a>
+        <a href="#mdd-startup-context" style="padding-left: 2rem; font-size: 0.9em;">Startup Context</a>
         <a href="#featured-packages">Featured Packages</a>
         <a href="#what-is-this">What Is This?</a>
         <a href="#learning-path">Learning Path</a>
@@ -213,8 +215,8 @@
             <div class="feature-icon feature-icon-green">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             </div>
-            <h3>9 Hooks</h3>
-            <p>Deterministic enforcement that always runs. Block secrets, lint on save, verify no credentials, branch protection, port conflicts, Rybbit pre-deploy gate, E2E test gate, env sync warnings, and RuleCatch monitoring (optional &mdash; skips silently if not installed).</p>
+            <h3>10 Hooks</h3>
+            <p>Deterministic enforcement that always runs. Block secrets, lint on save, verify no credentials, branch protection, port conflicts, Rybbit pre-deploy gate, E2E test gate, env sync warnings, RuleCatch monitoring (optional &mdash; skips silently if not installed), and SessionStart context injection (session-context.sh) &mdash; injects <code>.mdd/.startup.md</code> at session start so Claude is oriented in ~100 tokens.</p>
           </div>
 
           <div class="feature-card">
@@ -402,6 +404,83 @@
         <pre><code class="language-text">After processing every 2 features, immediately append your notes to
 .mdd/audits/notes.md. If context compacts, read the TAIL of the notes
 file and continue from where you left off.</code></pre>
+
+        <div id="mdd-startup-context"></div>
+        <h3>Startup Context</h3>
+        <p>Every Claude Code session starts cold. Without context, Claude reads dozens of files to understand your project &mdash; burning thousands of tokens before writing a single line of output. The MDD Startup Context system eliminates this entirely.</p>
+
+        <p><code>.mdd/.startup.md</code> is a compact project snapshot that the <code>SessionStart</code> hook injects automatically at the start of every session &mdash; including after <code>/clear</code> and after context compaction. Claude reads one file (~100&ndash;200 tokens) instead of your entire codebase. It is regenerated automatically by <code>/mdd</code> commands and gitignored &mdash; it is machine state, not source code.</p>
+
+        <div class="callout" style="background: var(--bg-secondary); border-left: 4px solid var(--accent-cyan); padding: 1rem 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+          <strong>The two-zone model:</strong>
+          <ul style="margin: 0.75rem 0 0 0; padding-left: 1.25rem;">
+            <li><strong>Auto-generated zone</strong> (above the <code>---</code> divider) &mdash; rewritten by <code>/mdd status</code>, <code>/mdd add</code>, and <code>/mdd audit</code>. Contains git branch, stack summary, features list, last audit results, and rules quick-reference.</li>
+            <li><strong>Notes zone</strong> (below the <code>---</code> divider) &mdash; append-only, never overwritten. Your own timestamped annotations added with <code>/mdd note</code>.</li>
+          </ul>
+        </div>
+
+        <p><strong>Example file:</strong></p>
+        <pre><code class="language-text">## Project Snapshot
+Generated: 2026-03-04 | Branch: feat/webserver
+
+## Stack
+Framework: Next.js | DB: MongoDB (StrictDB) | Host: Dokploy
+
+## Features Documented (4)
+01-project-scaffolding -- complete
+02-profile-system -- complete
+03-auth -- complete
+04-webserver -- IN PROGRESS
+
+## Last Audit
+Date: 2026-03-01 | Findings: 20 | Fixed: 17 | Open: 3
+Open: ssl-redeploy-race, nginx-log-tab, e2e-coverage-gap
+
+## Rules Summary
+Read CLAUDE.md for full rules. Key rules:
+- TypeScript always, strict mode, no any
+- StrictDB only -- no raw drivers
+- /api/v1/ prefix on all endpoints
+- No file > 300 lines, no function > 50 lines
+- Never commit .env
+
+---
+
+## Notes
+- [2026-03-04] ssl issue is a docker swarm bug, not nginx
+- [2026-03-04] waiting on Anthropic SessionStart fix for startup source</code></pre>
+
+        <table style="width: 100%; margin: 1rem 0;">
+          <thead>
+            <tr><th>Command</th><th>What it does</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>/mdd status</code></td><td>Regenerate <code>.startup.md</code> from current project state</td></tr>
+            <tr><td><code>/mdd note "text"</code></td><td>Append a timestamped note to the Notes zone</td></tr>
+            <tr><td><code>/mdd note list</code></td><td>Print only the Notes section</td></tr>
+            <tr><td><code>/mdd note clear</code></td><td>Wipe the Notes section (asks for confirmation)</td></tr>
+          </tbody>
+        </table>
+
+        <p>The hook that powers this is <code>session-context.sh</code> &mdash; wired to fire on <code>startup</code>, <code>clear</code>, and <code>compact</code> sources. The <code>resume</code> source is intentionally excluded: when resuming a session, Claude already has the transcript and injecting context again wastes tokens.</p>
+
+        <pre><code class="language-json">"SessionStart": [
+  {
+    "matcher": "startup|clear|compact",
+    "hooks": [
+      {
+        "type": "command",
+        "command": "bash .claude/hooks/session-context.sh"
+      }
+    ]
+  }
+]</code></pre>
+
+        <p><strong>Why not just use CLAUDE.md?</strong> CLAUDE.md is rules. <code>.startup.md</code> is state. Rules change rarely &mdash; you write them once and they compound over time. State changes constantly &mdash; current branch, active features, open findings. Mixing them means Claude re-reads your entire rulebook to find out what branch you are on. Separating them means each file stays small, focused, and cheap to load.</p>
+
+        <div class="callout" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(239, 68, 68, 0.05)); border-left: 4px solid #f59e0b; padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+          <strong>Known behaviour:</strong> The <code>SessionStart</code> hook with <code>source: "startup"</code> has a known intermittent bug in some Claude Code versions where context injection is silently skipped on brand new sessions. It works reliably on <code>/clear</code> and compaction. Run <code>/clear</code> at the start of any session where you need guaranteed context injection. This is an upstream Claude Code issue being tracked.
+        </div>
       </section>
 
       <!-- Featured Packages -->
