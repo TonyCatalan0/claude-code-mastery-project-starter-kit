@@ -132,20 +132,25 @@ Every phase reads the output of the previous phase, compressing context further 
 ### Usage — One Command, Three Modes
 
 ```bash
-# Build a new feature (Document → Test skeletons → Implement → Verify)
+# Build a new feature (Analyze → Document → Test skeletons → Plan → Implement → Verify)
 /mdd add user authentication with JWT tokens
 
-# Audit existing code (Read → Notes → Report → Fix)
+# Audit existing code (Scope → Read + Notes → Analyze → Present → Fix)
 /mdd audit
 /mdd audit database    # audit a specific section
 
-# Check MDD status (docs, tests, findings, quality gates)
+# Check MDD status and rebuild .mdd/.startup.md
 /mdd status
+
+# Append a note to .mdd/.startup.md (survives compaction)
+/mdd note "just switched to PostgreSQL"
+/mdd note list          # view all notes
+/mdd note clear         # wipe notes section
 ```
 
 **Build mode** (`/mdd <description>`) follows 7 phases: Understand → Analyze → Document → Test Skeletons → Plan → Implement → Verify. Phase 2 is a mandatory **Data Flow & Impact Analysis** gate — before writing a single line of docs, Claude reads the existing code the feature will touch, traces every data value end-to-end (backend computation → API transport → frontend consumption → UI transformation), checks for parallel computations of the same concept, and presents findings before proceeding. Skipped automatically on greenfield projects. Tests are generated *before* code — they define the finish line. Claude presents a build plan with named steps and time estimates, then waits for your approval before writing any code.
 
-**Audit mode** (`/mdd audit`) runs a complete security and quality audit. Claude reads all source files, writes incremental notes every 2 features (zero data loss through context compaction), then produces a severity-rated findings report and fixes everything.
+**Audit mode** (`/mdd audit`) runs a complete security and quality audit across 5 phases: (A1) Scope — reads all `.mdd/docs/` files to build the feature map, auto-generates docs if none exist; (A2) Read + Notes — reads all source files and writes incremental notes every 2 features so findings survive context compaction; (A3) Analyze — reads only the notes file to produce a severity-rated findings report; (A4) Present — shows top findings with effort estimates and asks what to fix; (A5) Fix — applies fixes, writes tests, and updates documentation. Auto-branches to `fix/mdd-audit-<date>` before making any changes.
 
 ### The `.mdd/` Directory
 
@@ -153,24 +158,26 @@ All MDD artifacts live in a single dotfile directory, gitignored by default:
 
 ```
 .mdd/
-├── docs/                        # Feature documentation (one per feature)
-│   ├── 01-project-scaffolding.md
-│   ├── 02-profile-system.md
+├── docs/                             # Feature documentation (one per feature)
+│   ├── 01-<feature-name>.md          # auto-numbered, YAML frontmatter + data_flow: field
+│   ├── 02-<feature-name>.md
 │   └── ...
-└── audits/                      # Audit artifacts
-    ├── notes-2026-03-01.md      # Raw reading notes
-    ├── report-2026-03-01.md     # Structured findings
-    └── results-2026-03-01.md    # Before/after summary
+├── audits/                           # Audit artifacts (all gitignored)
+│   ├── flow-<feature>-<date>.md      # Data flow analysis written during Phase 2
+│   ├── notes-<date>.md               # Raw reading notes (Phase A2, written every 2 features)
+│   ├── report-<date>.md              # Severity-rated findings report (Phase A3)
+│   └── results-<date>.md             # Before/after fix summary (Phase A5)
+└── .startup.md                       # Auto-generated session context (injected at startup)
 ```
 
 ### Real Results: Self-Audit
 
-| Phase | Time | Output |
-|-------|------|--------|
-| Phase 0: Documentation | ~25 min | 9 feature docs (795 lines) |
-| Phase 1: Read + Notes | 9 min 51s | 57+ files read, 837 lines of notes |
-| Phase 2: Analyze | 2 min 39s | 298-line report, 20 findings |
-| Phase 3: Fix All | 10 min 53s | 17/20 fixed, 125 tests written |
+| Audit Step | Time | Output |
+|------------|------|--------|
+| Create Docs (pre-audit) | ~25 min | 9 feature docs (795 lines) in `.mdd/docs/` |
+| A2: Read + Notes | 9 min 51s | 57+ files read, 837 lines of notes |
+| A3: Analyze | 2 min 39s | 298-line report, 20 findings |
+| A5: Fix All | 10 min 53s | 17/20 fixed, 125 tests written |
 | **Total** | **~48 min** | **20 findings, 125 tests from zero** |
 
 | Metric | Before MDD | After MDD |
