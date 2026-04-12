@@ -103,7 +103,46 @@ ls -la ~/.claude/ 2>/dev/null || echo "NO_GLOBAL_DIR"
      + lint-on-save.sh — installed
    ```
 
-## Step 3 — Verify Installation
+## Step 3B — Optional: Install MDD Globally
+
+After hooks are installed, ask the user via AskUserQuestion:
+
+**Question:** "Do you also want to install MDD globally? This copies `/mdd` and `/install-mdd` to `~/.claude/commands/` so they're available from every project without needing the starter kit open."
+
+**Options:**
+- **"Yes, install MDD globally"** — proceed below
+- **"No, skip"** — skip to Step 4
+
+**If yes:**
+
+```bash
+mkdir -p ~/.claude/commands
+
+# Check current state
+[ -f ~/.claude/commands/mdd.md ] && echo "MDD_EXISTS" || echo "MDD_CLEAN"
+[ -f ~/.claude/commands/install-mdd.md ] && echo "INSTALL_MDD_EXISTS" || echo "INSTALL_MDD_CLEAN"
+```
+
+For each file (`mdd.md`, `install-mdd.md`):
+- If the file **already exists** at `~/.claude/commands/` → ask: "mdd.md already exists globally. Overwrite with the latest version? (yes / keep existing)"
+- If it **does NOT exist** → copy it from `.claude/commands/`
+
+Report:
+```
+Global MDD install:
+  + mdd.md — installed (now available as /mdd in every project)
+  + install-mdd.md — installed (now available as /install-mdd in every project)
+```
+or
+```
+Global MDD install:
+  ✓ mdd.md — already up to date, skipped
+  + install-mdd.md — installed
+```
+
+---
+
+## Step 4 — Verify Installation
 
 After all merges, verify:
 
@@ -118,7 +157,7 @@ echo "=== Global hooks ==="
 ls ~/.claude/hooks/ 2>/dev/null || echo "✗ NO HOOKS"
 ```
 
-## Step 4 — Report
+## Step 5 — Report
 
 ```
 Global Config Installation Complete
