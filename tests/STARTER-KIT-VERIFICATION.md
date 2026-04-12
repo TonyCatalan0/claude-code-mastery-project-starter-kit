@@ -35,6 +35,7 @@ ls -1 .claude/commands/
 - [ ] `diagram.md` exists
 - [ ] `help.md` exists
 - [ ] `install-global.md` exists
+- [ ] `install-mdd.md` exists
 - [ ] `new-project.md` exists
 - [ ] `optimize-docker.md` exists
 - [ ] `progress.md` exists

@@ -95,7 +95,7 @@ Everything you need to start a Claude Code project the right way — security, a
 
 - **CLAUDE.md** — Battle-tested project instructions with 11 numbered critical rules for security, TypeScript, database access, testing, and deployment
 - **Global CLAUDE.md** — Security gatekeeper for all projects. Never publish secrets, never commit .env files, standardized scaffolding rules
-- **27 Slash Commands** (17 project + 10 kit management) — `/mdd`, `/help`, `/quickstart`, `/install-global`, `/setup`, `/show-user-guide`, `/diagram`, `/review`, `/commit`, `/progress`, `/test-plan`, `/architecture`, `/new-project`, `/security-check`, `/optimize-docker`, `/create-e2e`, `/create-api`, `/worktree`, `/what-is-my-ai-doing`, `/refactor`, `/set-project-profile-default`, `/add-project-setup`, `/projects-created`, `/remove-project`, `/convert-project-to-starter-kit`, `/update-project`, `/add-feature`
+- **28 Slash Commands** (17 project + 11 kit management) — `/mdd`, `/help`, `/quickstart`, `/install-global`, `/install-mdd`, `/setup`, `/show-user-guide`, `/diagram`, `/review`, `/commit`, `/progress`, `/test-plan`, `/architecture`, `/new-project`, `/security-check`, `/optimize-docker`, `/create-e2e`, `/create-api`, `/worktree`, `/what-is-my-ai-doing`, `/refactor`, `/set-project-profile-default`, `/add-project-setup`, `/projects-created`, `/remove-project`, `/convert-project-to-starter-kit`, `/update-project`, `/add-feature`
 - **9 Hooks** — Deterministic enforcement that always runs. Block secrets, lint on save, verify no credentials, branch protection, port conflicts, Rybbit pre-deploy gate, E2E test gate, env sync warnings, and RuleCatch monitoring (optional — skips silently if not installed)
 - **Skills** — Context-aware templates: systematic code review checklist and full microservice scaffolding
 - **Custom Agents** — Read-only code reviewer for security audits. Test writer that creates tests with explicit assertions
@@ -454,6 +454,7 @@ project/
 │   │   ├── setup.md             # /setup — interactive .env configuration
 │   │   ├── refactor.md          # /refactor — audit + refactor against all rules
 │   │   ├── install-global.md    # /install-global — merge global config into ~/.claude/
+│   │   ├── install-mdd.md       # /install-mdd — install MDD workflow into any project
 │   │   ├── diagram.md           # /diagram — generate diagrams from actual code
 │   │   ├── set-project-profile-default.md # /set-project-profile-default — set default profile
 │   │   ├── add-project-setup.md  # /add-project-setup — create a named profile
@@ -846,13 +847,22 @@ Writes to `project-docs/ARCHITECTURE.md` and `project-docs/INFRASTRUCTURE.md`. U
 
 ### `/install-global`
 
-One-time setup: installs the starter kit's global Claude config into `~/.claude/`.
+One-time setup: installs the starter kit's global Claude config into `~/.claude/`. Also asks if you want to install MDD globally — copies `/mdd` and `/install-mdd` to `~/.claude/commands/` so they're available from any project.
 
 - **Smart merge** — if you already have a global `CLAUDE.md`, it appends missing sections without overwriting yours
 - **settings.json** — merges deny rules and hooks (never removes existing ones)
 - **Hooks** — copies `block-secrets.py`, `verify-no-secrets.sh`, and `check-rulecatch.sh` to `~/.claude/hooks/`
 
 Reports exactly what was added, skipped, and merged. Your existing config is never overwritten.
+
+### `/install-mdd [path]`
+
+Install the MDD workflow into any existing project — copies the `/mdd` slash command and scaffolds the `.mdd/docs/`, `.mdd/audits/`, and `.mdd/.startup.md` structure. Works on any stack, any project. Pass a path or run from within the target project.
+
+```bash
+/install-mdd                        # install into current project
+/install-mdd /path/to/other-project # install into a specific path
+```
 
 ### `/setup`
 

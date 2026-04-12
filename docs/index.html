@@ -223,8 +223,8 @@
             <div class="feature-icon feature-icon-blue">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
             </div>
-            <h3>26 Slash Commands (16 project + 10 kit management)</h3>
-            <p><code>/help</code>, <code>/quickstart</code>, <code>/install-global</code>, <code>/setup</code>, <code>/show-user-guide</code>, <code>/diagram</code>, <code>/review</code>, <code>/commit</code>, <code>/progress</code>, <code>/test-plan</code>, <code>/architecture</code>, <code>/new-project</code>, <code>/security-check</code>, <code>/optimize-docker</code>, <code>/create-e2e</code>, <code>/create-api</code>, <code>/worktree</code>, <code>/what-is-my-ai-doing</code>, <code>/refactor</code>, <code>/set-project-profile-default</code>, <code>/add-project-setup</code>, <code>/projects-created</code>, <code>/remove-project</code>, <code>/convert-project-to-starter-kit</code>, <code>/update-project</code>, <code>/add-feature</code></p>
+            <h3>28 Slash Commands (17 project + 11 kit management)</h3>
+            <p><code>/mdd</code>, <code>/help</code>, <code>/quickstart</code>, <code>/install-global</code>, <code>/install-mdd</code>, <code>/setup</code>, <code>/show-user-guide</code>, <code>/diagram</code>, <code>/review</code>, <code>/commit</code>, <code>/progress</code>, <code>/test-plan</code>, <code>/architecture</code>, <code>/new-project</code>, <code>/security-check</code>, <code>/optimize-docker</code>, <code>/create-e2e</code>, <code>/create-api</code>, <code>/worktree</code>, <code>/what-is-my-ai-doing</code>, <code>/refactor</code>, <code>/set-project-profile-default</code>, <code>/add-project-setup</code>, <code>/projects-created</code>, <code>/remove-project</code>, <code>/convert-project-to-starter-kit</code>, <code>/update-project</code>, <code>/add-feature</code></p>
           </div>
 
           <div class="feature-card">
@@ -762,6 +762,7 @@ cp .claude/hooks/check-rulecatch.sh ~/.claude/hooks/</code></pre>
 │   │   ├── setup.md             # /setup — interactive .env configuration
 │   │   ├── refactor.md          # /refactor — audit + refactor against all rules
 │   │   ├── install-global.md    # /install-global — merge global config into ~/.claude/
+│   │   ├── install-mdd.md       # /install-mdd — install MDD workflow into any project
 │   │   ├── diagram.md           # /diagram — generate diagrams from actual code
 │   │   ├── set-project-profile-default.md # /set-project-profile-default — set default profile
 │   │   ├── add-project-setup.md  # /add-project-setup — create a named profile
@@ -1251,13 +1252,25 @@ fi</code></pre>
 
           <div class="command-card">
             <h3><code>/install-global</code></h3>
-            <p class="command-desc">One-time setup: installs the starter kit's global Claude config into <code>~/.claude/</code>.</p>
+            <p class="command-desc">One-time setup: installs the starter kit's global Claude config into <code>~/.claude/</code>. Also asks if you want to install MDD globally.</p>
             <ul>
               <li><strong>Smart merge</strong> &mdash; if you already have a global <code>CLAUDE.md</code>, it appends missing sections without overwriting yours</li>
               <li><strong>settings.json</strong> &mdash; merges deny rules and hooks (never removes existing ones)</li>
               <li><strong>Hooks</strong> &mdash; copies <code>block-secrets.py</code>, <code>verify-no-secrets.sh</code>, and <code>check-rulecatch.sh</code> to <code>~/.claude/hooks/</code></li>
+              <li><strong>Optional MDD global install</strong> &mdash; copies <code>/mdd</code> and <code>/install-mdd</code> to <code>~/.claude/commands/</code></li>
             </ul>
             <p>Reports exactly what was added, skipped, and merged. Your existing config is never overwritten.</p>
+          </div>
+
+          <div class="command-card">
+            <h3><code>/install-mdd [path]</code></h3>
+            <p class="command-desc">Install the MDD workflow into any existing project &mdash; no full starter kit required.</p>
+            <ul>
+              <li>Copies the <code>/mdd</code> slash command to <code>.claude/commands/</code></li>
+              <li>Scaffolds <code>.mdd/docs/</code>, <code>.mdd/audits/</code>, and <code>.mdd/.startup.md</code></li>
+              <li>Adds <code>.mdd/audits/</code> to <code>.gitignore</code> (audit reports are ephemeral)</li>
+              <li>Works on any stack &mdash; pass a path or run from within the target project</li>
+            </ul>
           </div>
 
           <div class="command-card">

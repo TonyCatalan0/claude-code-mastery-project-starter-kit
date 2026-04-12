@@ -47,6 +47,7 @@
 | `/show-user-guide` | Open the comprehensive User Guide in your browser |
 | **Setup** | |
 | `/install-global` | Install/merge global Claude config into `~/.claude/` (one-time, never overwrites) |
+| `/install-mdd [path]` | Install MDD workflow into any existing project — copies `/mdd` command + scaffolds `.mdd/` |
 | `/setup` | Interactive .env configuration — GitHub, database, Docker, analytics, RuleCatch |
 | `/setup --reset` | Re-configure everything from scratch |
 | `/set-project-profile-default` | Set the default profile for `/new-project` (any profile: clean, go, vue, python-api, etc.) |
@@ -789,7 +790,7 @@ Every command has a `scope:` field in its YAML frontmatter:
 
 **Project commands:** `help`, `review`, `commit`, `progress`, `test-plan`, `architecture`, `security-check`, `optimize-docker`, `create-e2e`, `create-api`, `worktree`, `refactor`, `diagram`, `setup`, `what-is-my-ai-doing`, `show-user-guide`
 
-**Starter-kit commands:** `new-project`, `update-project`, `convert-project-to-starter-kit`, `install-global`, `projects-created`, `remove-project`, `set-project-profile-default`, `add-project-setup`, `quickstart`, `add-feature`
+**Starter-kit commands:** `new-project`, `update-project`, `convert-project-to-starter-kit`, `install-global`, `install-mdd`, `projects-created`, `remove-project`, `set-project-profile-default`, `add-project-setup`, `quickstart`, `add-feature`
 
 When distributing commands (new-project, convert, update), **always filter by `scope: project`** in the source command's frontmatter. Skills, agents, hooks, and settings.json are copied in full regardless of scope.
 
