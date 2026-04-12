@@ -35,6 +35,11 @@ Parse `$ARGUMENTS` to determine the mode:
 - If arguments start with `audit` → **Audit Mode** (jump to Phase A)
 - If arguments start with `status` → **Status Mode** (jump to Phase S)
 - If arguments start with `note` → **Note Mode** (jump to Phase N)
+- If arguments start with `scan` → **Scan Mode** (jump to Phase SC)
+- If arguments start with `update` → **Update Mode** (jump to Phase U)
+- If arguments start with `deprecate` → **Deprecate Mode** (jump to Phase D)
+- If arguments start with `reverse-engineer` or `reverse` → **Reverse-Engineer Mode** (jump to Phase R)
+- If arguments start with `graph` → **Graph Mode** (jump to Phase G)
 - If arguments are empty → ask the user what they want to do
 - Otherwise → **Build Mode** (the default — jump to Phase 1)
 
@@ -53,13 +58,17 @@ Before writing anything, gather context:
 3. **Scan `.mdd/docs/`** — see what features already exist
 4. **Scan `src/`** — understand current codebase structure
 
+**Detect task type before asking questions.** If `src/` has fewer than 3 TypeScript/source files AND the feature description contains words like `workflow`, `command`, `config`, `docs`, `tooling`, `hook`, `script`, or `prompt` — mark as a **tooling task** and skip the database and API questions entirely.
+
 Then ask the user targeted questions using AskUserQuestion. Ask ALL relevant questions upfront in a single interaction — don't spread them across multiple turns:
 
 **Always ask:**
+- "Does this feature depend on any existing features?" (list the ones from `.mdd/docs/`)
+- "Are there any edge cases or error scenarios you already know about?"
+
+**Ask only for non-tooling tasks:**
 - "Does this feature need database storage? If so, what data does it store?"
 - "Does this feature have API endpoints? What operations (create, read, update, delete)?"
-- "Does this feature depend on any existing features?" (list the ones from `documentation/`)
-- "Are there any edge cases or error scenarios you already know about?"
 
 **Ask if relevant:**
 - "Does this need authentication/authorization?"
@@ -157,6 +166,9 @@ models:
 test_files:
   - <test files that will be created>
 data_flow: <path to .mdd/audits/flow-*.md, or "greenfield" if skipped>
+last_synced: <YYYY-MM-DD>
+status: draft
+phase: <last completed phase name, or "all" when fully built>
 known_issues: []
 ---
 
@@ -196,6 +208,8 @@ known_issues: []
 ```
 
 **CRITICAL:** This documentation is the source of truth. Everything that follows is generated FROM this doc. Take time to make it complete and accurate.
+
+**Always set `last_synced` to today's date** when writing or updating a feature doc. This is what SCAN MODE uses to detect drift. Set `status: draft` for new docs; update to `in_progress` when implementation begins, `complete` when Phase 7 is done.
 
 **After writing the feature doc**, trigger the `.mdd/.startup.md` rebuild (same logic as in Status Mode — rebuild auto-generated zone, preserve Notes zone) so the Features list stays current.
 
@@ -428,14 +442,25 @@ Present:
 ```
 📊 MDD Status
 
-Feature docs:     <N> files in documentation/
+Feature docs:     <N> files in .mdd/docs/
 Last audit:       <date> (<N> findings, <N> fixed, <N> open)
 Test coverage:    <N> unit tests, <N> E2E tests
 Known issues:     <N> tracked across <N> features
 Quality gates:    <N> files over 300 lines
 
-Run `/mdd audit` to refresh or `/mdd <feature>` to build something new.
+Drift check:
+  <N> features in sync
+  <N> features possibly drifted  ← run /mdd scan for details
+  <N> features untracked         ← no last_synced field yet
+
+Run `/mdd audit` to refresh, `/mdd scan` to see drift details, or `/mdd <feature>` to build something new.
 ```
+
+**Drift check logic** (lightweight — no full git log, just a quick presence check):
+1. For each `.mdd/docs/*.md`, read `last_synced` from frontmatter.
+2. If `last_synced` is missing → untracked.
+3. If `last_synced` exists: run `git log --oneline --after="<last_synced>" -- <source_files>` for the first source file only (quick check). If output is non-empty → possibly drifted.
+4. Count each category and show totals. Full details go in SCAN MODE.
 
 ### Rebuild `.mdd/.startup.md`
 
@@ -483,6 +508,295 @@ Triggered when arguments start with `note`. Three subcommands:
 1. Ask the user: `Clear all notes in .mdd/.startup.md? This cannot be undone. (yes/no)`
 2. If yes: rewrite the Notes section (everything after `---`) as `(no notes)`
 3. If no: abort with `Cancelled.`
+
+---
+
+---
+
+## SCAN MODE — `/mdd scan`
+
+Triggered when arguments start with `scan`. Detects features whose source files have changed since the last MDD session.
+
+### Phase SC1 — Read all feature docs
+
+Read every `.mdd/docs/*.md` (excluding `archive/`). For each, extract:
+- `last_synced` from frontmatter
+- `source_files` list from frontmatter
+
+### Phase SC2 — Check each feature for drift
+
+For each feature, classify it:
+
+**Untracked** — `last_synced` is missing from frontmatter. No baseline to compare against.
+
+**Broken reference** — one or more `source_files` no longer exist on disk.
+
+**Possibly drifted** — `last_synced` exists and files exist. Run for each source file:
+```bash
+git log --oneline --after="<last_synced>" -- <source_file>
+```
+If any output is returned, commits exist after the last sync → possibly drifted. Write the commit count and most recent commit message for context.
+
+**In sync** — `last_synced` exists, all files exist, no commits after `last_synced`.
+
+### Phase SC3 — Present drift report
+
+```
+🔍 MDD Scan — Drift Report
+Generated: <YYYY-MM-DD>
+
+  ✅ 01-project-scaffolding   — in sync (last synced: 2026-03-15)
+  ⚠️  04-content-builder       — DRIFTED (3 commits since 2026-03-01)
+                                  Latest: "fix: markdown heading parser"
+  ❌  07-github-pages           — broken reference (docs/index.html not found)
+  ❓  09-integrations           — untracked (no last_synced field)
+
+Summary: 1 in sync · 1 drifted · 1 broken · 1 untracked
+
+Recommended actions:
+  /mdd update 04   — re-sync content-builder doc with code
+  /mdd update 07   — fix broken file reference
+  /mdd update 09   — add last_synced by running update mode
+```
+
+Save the full report to `.mdd/audits/scan-<date>.md`.
+
+---
+
+## UPDATE MODE — `/mdd update <feature-id>`
+
+Triggered when arguments start with `update`. Updates an existing feature doc to reflect code that has changed since the last MDD session.
+
+### Phase U1 — Load the feature
+
+Parse `<feature-id>` from arguments (e.g., `04` or `04-content-builder`). Find the matching `.mdd/docs/*.md` file. Read it fully.
+
+If the feature-id is not found, list all available docs and ask the user to pick one.
+
+### Phase U2 — Read current source files
+
+Read every file listed in `source_files` frontmatter. If a file is missing, note it as a broken reference — ask the user for the new path before continuing.
+
+### Phase U3 — Diff doc vs code
+
+Compare what the doc says against what the code actually does:
+- New functions, endpoints, or exports not in the doc
+- Removed or renamed functions that the doc still mentions
+- Data model fields that changed
+- Business rules that changed (different validation, new states)
+- New edge cases visible in error handling
+
+Write findings to `.mdd/audits/update-notes-<feature-id>-<date>.md`.
+
+### Phase U4 — Present changes
+
+```
+📝 Update Review: <NN>-<feature-name>
+
+Changes detected since <last_synced>:
+  + Added:   <new thing>
+  - Removed: <removed thing>
+  ~ Changed: <changed thing>
+
+Doc sections needing update:
+  - API Endpoints (new route: POST /api/v1/...)
+  - Business Rules (validation logic changed)
+
+Proceed with doc update? (yes / review findings first / cancel)
+```
+
+Wait for user confirmation.
+
+### Phase U5 — Rewrite affected sections
+
+Rewrite ONLY the sections that changed. Preserve:
+- `known_issues` section (don't remove existing issues)
+- `depends_on` list (only add, never remove without asking)
+- Any manually written prose that is still accurate
+
+After rewriting, update frontmatter:
+- `last_synced: <today's date>`
+- `status:` — ask the user if they want to update the status (e.g., draft → complete)
+- `phase:` — update to reflect current state
+
+### Phase U6 — Regenerate test skeletons for new behaviors
+
+For any NEW documented behaviors (not previously in the doc), generate test skeleton entries and append them to the existing test file. Do NOT modify existing test implementations.
+
+Report:
+```
+✅ Update Complete: <NN>-<feature-name>
+
+Doc updated: .mdd/docs/<NN>-<feature-name>.md
+last_synced: <today>
+Sections rewritten: <list>
+New test skeletons: <N> appended to tests/unit/<feature-name>.test.ts
+
+Branch: <current branch>
+```
+
+---
+
+## DEPRECATE MODE — `/mdd deprecate <feature-id>`
+
+Triggered when arguments start with `deprecate`. Archives a feature cleanly.
+
+### Phase D1 — Load + impact check
+
+Find and read the target feature doc. Then scan all other `.mdd/docs/*.md` for any that list this feature in `depends_on`. Build the impact list.
+
+### Phase D2 — Present impact
+
+```
+🗑️  Deprecate: <NN>-<feature-name>
+
+This will:
+  - Set status: deprecated in the doc frontmatter
+  - Move doc to .mdd/docs/archive/<NN>-<feature-name>.md
+
+Dependents (docs that depend on this feature):
+  - 05-testing-framework (depends_on includes this)
+  - 09-integrations (depends_on includes this)
+
+Source files registered:
+  - src/handlers/content.ts
+  - scripts/build-content.ts
+
+Test files registered:
+  - tests/unit/content-builder.test.ts
+
+Deprecate? (yes / review dependents first / cancel)
+```
+
+If user says yes:
+
+### Phase D3 — Archive
+
+1. Set `status: deprecated` and `last_synced: <today>` in the doc frontmatter.
+2. Create `.mdd/docs/archive/` directory if it doesn't exist.
+3. Move the doc file to `.mdd/docs/archive/`.
+4. For each dependent doc, add an entry to its `known_issues`: `<NN>-<feature-name> has been deprecated — review this feature's dependency.`
+5. Ask the user separately: "Delete source files? (yes / no)" and "Delete test files? (yes / no)" — never auto-delete.
+6. Rebuild `.mdd/.startup.md`.
+
+Report:
+```
+✅ Deprecated: <NN>-<feature-name>
+
+Doc archived: .mdd/docs/archive/<NN>-<feature-name>.md
+Dependents flagged: <N> docs updated with known_issues warning
+Source files: <kept/deleted per user choice>
+Test files: <kept/deleted per user choice>
+```
+
+---
+
+## REVERSE-ENGINEER MODE — `/mdd reverse-engineer [path or feature-id]`
+
+Triggered when arguments start with `reverse-engineer` or `reverse`. Generates or regenerates MDD documentation from existing source code.
+
+### Phase R1 — Determine scope
+
+**If a path or feature-id is given:**
+- If it matches an existing `.mdd/docs/*.md` — load that doc as the "existing doc" for comparison (regenerate mode).
+- If it's a file path — read that file as the only source (new doc mode).
+
+**If no argument is given:**
+- Scan `src/` for all TypeScript/source files.
+- Cross-reference against `source_files` fields in all `.mdd/docs/*.md`.
+- List files not registered in any doc. Ask the user which ones to document.
+
+### Phase R2 — Read source files
+
+Read each identified source file. For each, infer:
+- **Purpose:** What does this file do? What problem does it solve?
+- **Data models:** TypeScript interfaces, types, Zod schemas
+- **API routes:** Express/Fastify/etc. route definitions and their handlers
+- **Business rules:** Conditional logic, validation, state transitions
+- **Dependencies:** What other modules does it import?
+- **Edge cases:** Error handling patterns, guard clauses
+
+### Phase R3 — Draft the doc
+
+Draft a complete feature doc following the Phase 3 template. Set:
+- `last_synced: <today>`
+- `status: draft` (since business intent may be incomplete)
+- `phase: reverse-engineered`
+
+**In regenerate mode:** Show the existing doc alongside the new draft:
+```
+📋 Regeneration Comparison: <NN>-<feature-name>
+
+Existing doc sections:     New draft sections:
+  Purpose: ...               Purpose: ... (updated)
+  Architecture: ...          Architecture: ... (same)
+  API Endpoints: ...         API Endpoints: ... (3 new routes found)
+  Business Rules: ...        Business Rules: ... (changed)
+
+Changes: 2 sections updated, 1 section unchanged, 1 section added
+```
+
+Ask: "Merge new draft into existing doc? (yes / keep existing / show full diff)"
+
+**In new doc mode:** Show the full draft and ask: "Does this accurately describe the feature? Anything to add or change?"
+
+### Phase R4 — Save and optionally generate test skeletons
+
+After user confirmation, write the doc. Then ask:
+"Generate test skeletons from the inferred endpoints and business rules? (yes / no)"
+
+If yes, follow Phase 4 logic using the newly written doc.
+
+**Always disclose limitations before saving:**
+```
+⚠️  Reverse-engineer limitations:
+   - "Purpose" section is inferred — review business intent carefully
+   - Implicit constraints (SLAs, compliance, product decisions) are not captured
+   - Confirm accuracy before treating this doc as the source of truth
+```
+
+---
+
+## GRAPH MODE — `/mdd graph`
+
+Triggered when arguments start with `graph`. Shows the cross-feature dependency map.
+
+### Phase G1 — Build dependency graph
+
+Read all `.mdd/docs/*.md` (including `archive/`). For each doc, extract `id`, `title`, `status`, and `depends_on`.
+
+Build a directed graph: edge A → B means "A depends on B" (B must exist for A to work).
+
+### Phase G2 — Detect issues
+
+**Broken dependency:** A doc lists a deprecated or archived feature in `depends_on`.
+
+**Risky dependency:** A `status: complete` feature depends on a `status: in_progress` or `status: draft` feature.
+
+**Orphan:** A feature with no `depends_on` and no other feature depending on it.
+
+### Phase G3 — Render
+
+```
+📊 MDD Dependency Graph
+
+Dependencies (A depends on → B):
+
+  06-command-system ──────────────────► 01-project-scaffolding
+  09-integrations ────────────────────► 06-command-system
+  04-content-builder ─────────────────► 03-database-layer
+  05-testing-framework ───────────────► 03-database-layer
+
+Orphans (no dependencies, no dependents):
+  07-github-pages
+  08-quality-gates
+
+Issues:
+  ⚠️  09-integrations depends on 06-command-system (status: in_progress) — risky
+  ❌  05-testing-framework depends on 10-mdd-refinements (deprecated) — broken
+```
+
+Save the graph to `.mdd/audits/graph-<date>.md`.
 
 ---
 
