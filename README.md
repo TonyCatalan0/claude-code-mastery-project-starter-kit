@@ -42,7 +42,7 @@ Progress through these phases at your own pace. Each builds on the previous one.
 
 The starter kit supports two development workflows:
 - **Classic** — `/review`, `/commit`, `/create-api`, `/create-e2e` (individual commands, you drive)
-- **MDD** — `/mdd` (structured Document → Test → Code workflow, Claude drives with your approval)
+- **MDD** — `/mdd` (structured Analyze → Document → Test → Code workflow, Claude drives with your approval)
 
 Both use the same hooks, rules, and quality gates. MDD adds structured documentation and audit capabilities on top.
 
