@@ -142,6 +142,7 @@
       <a href="#whats-included">What's Included</a>
       <a href="#mdd-workflow">MDD Workflow ✨ NEW</a>
       <a href="#mdd-startup-context">Startup Context</a>
+      <a href="#mdd-dashboard">MDD Dashboard</a>
       <a href="#featured-packages">Featured Packages</a>
       <a href="#what-is-this">What Is This?</a>
       <a href="#learning-path">Learning Path</a>
@@ -206,6 +207,7 @@
         <a href="#whats-included" class="active">What's Included</a>
         <a href="#mdd-workflow" class="nav-new">MDD Workflow ✨ NEW</a>
         <a href="#mdd-startup-context" style="padding-left: 2rem; font-size: 0.9em;">Startup Context</a>
+        <a href="#mdd-dashboard" style="padding-left: 2rem; font-size: 0.9em;">MDD Dashboard</a>
         <a href="#featured-packages">Featured Packages</a>
         <a href="#what-is-this">What Is This?</a>
         <a href="#learning-path">Learning Path</a>
@@ -564,10 +566,48 @@ Read CLAUDE.md for full rules. Key rules:
         </div>
       </section>
 
+      <!-- MDD Dashboard -->
+      <section id="mdd-dashboard">
+        <h2>MDD Dashboard &mdash; Terminal TUI</h2>
+        <p>The <code>mdd</code> package is a standalone terminal dashboard for MDD workspaces. Run it inside any project with a <code>.mdd/</code> folder to get a real-time, interactive view of your workspace health &mdash; without leaving VS Code.</p>
+
+        <pre class="language-bash"><code class="language-bash">npm install -g mdd</code></pre>
+
+        <p>Then inside any project with a <code>.mdd/</code> folder:</p>
+        <pre class="language-bash"><code class="language-bash">mdd              # opens the interactive TUI
+mdd dashboard    # same
+mdd status       # same — all three open the dashboard</code></pre>
+
+        <div class="commands-grid" style="grid-template-columns: 1fr 1fr; margin: 1.5rem 0;">
+          <div class="command-card">
+            <h3>Left Panel</h3>
+            <p class="command-desc">All feature docs, audit reports (scan, flow, notes, results), and dependency graph — navigated with <kbd>↑↓</kbd> arrow keys.</p>
+          </div>
+          <div class="command-card">
+            <h3>Right Panel</h3>
+            <p class="command-desc">Full doc or audit content with drift chips, frontmatter badges, and scrollable markdown. Press <kbd>→</kbd> to focus, <kbd>↑↓</kbd> to scroll, <kbd>←</kbd> to return.</p>
+          </div>
+          <div class="command-card">
+            <h3>Status Bar</h3>
+            <p class="command-desc">Live counts: total docs, in-sync, drifted, broken, untracked, open issues, and audits. Updated on every <kbd>r</kbd> refresh.</p>
+          </div>
+          <div class="command-card">
+            <h3>Drift Detection</h3>
+            <p class="command-desc">Auto-runs <code>git log</code> against each doc's <code>last_synced</code> field. Docs whose <code>source_files</code> changed since last sync are marked <strong>⚠️ drifted</strong>.</p>
+          </div>
+        </div>
+
+        <div class="callout" style="background: var(--bg-secondary); border-left: 4px solid var(--accent-cyan); padding: 1rem 1.25rem; border-radius: 0.5rem;">
+          <strong>Keyboard shortcuts:</strong> <kbd>↑↓</kbd> navigate &middot; <kbd>→</kbd> / <kbd>Enter</kbd> open right panel &middot; <kbd>←</kbd> back &middot; <kbd>r</kbd> re-scan &middot; <kbd>q</kbd> quit
+        </div>
+
+        <p style="margin-top: 1rem;">npm: <a href="https://www.npmjs.com/package/mdd" target="_blank" rel="noopener">mdd</a> &middot; <a href="https://github.com/TheDecipherist/mdd" target="_blank" rel="noopener">GitHub</a></p>
+      </section>
+
       <!-- Featured Packages -->
       <section id="featured-packages">
         <h2>Featured Packages</h2>
-        <p>Four open-source npm packages by <a href="https://github.com/TheDecipherist" target="_blank" rel="noopener">TheDecipherist</a> &mdash; the same developer behind this starter kit &mdash; are integrated into project profiles. All are MIT-licensed.</p>
+        <p>Five open-source npm packages by <a href="https://github.com/TheDecipherist" target="_blank" rel="noopener">TheDecipherist</a> &mdash; the same developer behind this starter kit &mdash; are integrated into project profiles. All are MIT-licensed.</p>
 
         <div class="callout" style="background: var(--bg-secondary); border-left: 4px solid var(--accent-cyan); padding: 1rem 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
           <strong>Full disclosure:</strong> These packages are developed by the same person who maintains this starter kit. They are completely open source (MIT license), and the starter kit works fully without them. ClassMCP and Classpresso are auto-included in CSS-enabled profiles because they directly complement the AI-assisted CSS workflow this kit teaches. StrictDB-MCP is auto-included in database-enabled profiles. TerseJSON is documented but not auto-included.

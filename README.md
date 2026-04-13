@@ -264,9 +264,41 @@ One file. ~100-200 tokens. Claude is fully oriented before your first prompt.
 
 ---
 
+## MDD Dashboard — Terminal TUI
+
+The `mdd` package is a companion terminal dashboard for MDD workspaces. Run it inside any project that has a `.mdd/` folder to get a real-time, interactive view of your workspace health — without leaving VS Code.
+
+```bash
+npm install -g mdd
+```
+
+Then inside any project with a `.mdd/` folder:
+
+```bash
+mdd              # opens the interactive TUI
+mdd dashboard    # same
+mdd status       # same — all three open the dashboard
+```
+
+**What it shows:**
+
+| Panel | Contents |
+|-------|----------|
+| Left | All feature docs, audit reports, dependency graph (↑↓ to navigate) |
+| Right | Full doc or audit content with drift info, frontmatter chips, markdown (→ to focus, ↑↓ to scroll) |
+| Top bar | Counts: docs, in-sync, drifted, broken, untracked, open issues, audits |
+
+**Keyboard shortcuts:** `↑↓` navigate, `→` / `Enter` open right panel, `←` back, `r` refresh/re-scan, `q` quit
+
+The dashboard auto-detects drift by running `git log` against each doc's `last_synced` frontmatter field. Docs whose `source_files` have changed since last sync are marked ⚠️ drifted.
+
+> **Install automatically:** `/install-mdd` copies the MDD workflow into an existing project. The global install command `/install-global` installs `mdd` dashboard globally as part of the MDD setup.
+
+---
+
 ## Featured Packages
 
-Four open-source npm packages by [TheDecipherist](https://github.com/TheDecipherist) — the same developer behind this starter kit — are integrated into the default build. All are MIT-licensed.
+Five open-source npm packages by [TheDecipherist](https://github.com/TheDecipherist) — the same developer behind this starter kit — are integrated into the default build. All are MIT-licensed.
 
 > **Full disclosure:** These packages are developed by the same person who maintains this starter kit. They are completely open source (MIT license), and the starter kit works fully without them. ClassMCP and Classpresso are auto-included in CSS-enabled profiles because they directly complement the AI-assisted CSS workflow this kit teaches. StrictDB-MCP is auto-included in database-enabled profiles. TerseJSON is documented but not auto-included.
 
