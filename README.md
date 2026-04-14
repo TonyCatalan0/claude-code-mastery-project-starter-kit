@@ -161,7 +161,7 @@ Every phase reads the output of the previous phase, compressing context further 
 
 # Batch-patch missing frontmatter (last_synced, status, phase) across all docs
 # Fixes the UNTRACKED state — use once when upgrading from an older MDD version
-/mdd backfill
+/mdd upgrade
 
 # Append a note to .mdd/.startup.md (survives compaction)
 /mdd note "just switched to PostgreSQL"
@@ -183,7 +183,7 @@ Every phase reads the output of the previous phase, compressing context further 
 
 **Deprecate mode** (`/mdd deprecate <feature-id>`) retires a feature: sets `status: deprecated`, moves the doc to `.mdd/docs/archive/`, adds known-issue warnings to all dependents, and optionally deletes source and test files (asks separately for each).
 
-**Backfill mode** (`/mdd backfill`) batch-patches missing frontmatter fields (`last_synced`, `status`, `phase`) across all `.mdd/docs/` files. Non-destructive — existing fields are never touched. `last_synced` is inferred from `git log` on each doc file (not today's date), so drift calculations remain accurate. Shows a plan first and asks for confirmation before writing. Run once when upgrading from an older MDD version; if the MDD Dashboard shows all docs as UNTRACKED (❓), this is the fix.
+**Upgrade mode** (`/mdd upgrade`) batch-patches missing frontmatter fields (`last_synced`, `status`, `phase`) across all `.mdd/docs/` files. Non-destructive — existing fields are never touched. `last_synced` is inferred from `git log` on each doc file (not today's date), so drift calculations remain accurate. Shows a plan first and asks for confirmation before writing. Run once when upgrading from an older MDD version; if the MDD Dashboard shows all docs as UNTRACKED (❓), this is the fix.
 
 ### The `.mdd/` Directory
 
@@ -894,7 +894,7 @@ The core MDD workflow command. Nine modes in one:
 - **`/mdd reverse-engineer [path|id]`** — Generate MDD docs from existing code, or regenerate + compare against an existing doc. Always shows diff in regenerate mode.
 - **`/mdd graph`** — ASCII dependency map from `depends_on` fields, with broken and risky dependency warnings.
 - **`/mdd deprecate <feature-id>`** — Archive a feature: move doc to `.mdd/docs/archive/`, flag dependents, optionally delete source and test files.
-- **`/mdd backfill`** — Batch-patch missing `last_synced`/`status`/`phase` frontmatter across all docs. The fix when the MDD Dashboard shows all docs as UNTRACKED (❓). Non-destructive; shows plan before writing.
+- **`/mdd upgrade`** — Batch-patch missing `last_synced`/`status`/`phase` frontmatter across all docs. The fix when the MDD Dashboard shows all docs as UNTRACKED (❓). Non-destructive; shows plan before writing.
 
 All artifacts are stored in `.mdd/` (docs in `.mdd/docs/`, audit reports in `.mdd/audits/`). See the [MDD Workflow](#mdd-workflow--manual-first-development--new) section above for full details and real results.
 

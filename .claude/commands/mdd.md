@@ -98,7 +98,7 @@ Parse `$ARGUMENTS` to determine the mode:
 - If arguments start with `deprecate` → **Deprecate Mode** (jump to Phase D)
 - If arguments start with `reverse-engineer` or `reverse` → **Reverse-Engineer Mode** (jump to Phase R)
 - If arguments start with `graph` → **Graph Mode** (jump to Phase G)
-- If arguments start with `backfill` → **Backfill Mode** (jump to Phase BF)
+- If arguments start with `upgrade` → **Upgrade Mode** (jump to Phase UP)
 - If arguments are empty → ask the user what they want to do
 - Otherwise → **Build Mode** (the default — jump to Phase 1)
 
@@ -1218,24 +1218,24 @@ Save the graph to `.mdd/audits/graph-<date>.md`.
 
 ---
 
-## BACKFILL MODE — `/mdd backfill`
+## UPGRADE MODE — `/mdd upgrade`
 
-Triggered when arguments start with `backfill`.
+Triggered when arguments start with `upgrade`.
 
 Batch-patches missing frontmatter fields (`last_synced`, `status`, `phase`) across ALL `.mdd/docs/*.md` files without touching doc content. Safe to run multiple times — already-present fields are never overwritten.
 
-**Use case:** projects that used MDD before these fields were introduced, or after importing docs from another project. Running `/mdd backfill` converts all UNTRACKED docs to IN SYNC in one pass.
+**Use case:** projects that used MDD before these fields were introduced, or after importing docs from another project. Running `/mdd upgrade` converts all UNTRACKED docs to IN SYNC in one pass.
 
 ---
 
-### Phase BF1 — Inventory
+### Phase UP1 — Inventory
 
 1. Glob `.mdd/docs/*.md` (and `.mdd/docs/archive/*.md` if it exists). Collect all paths.
 2. For each doc, read its frontmatter only (up to the closing `---` line).
 3. Build an inventory table:
 
 ```
-📋 Backfill Inventory
+📋 Upgrade Inventory
 
 Doc                              | last_synced | status | phase
 ─────────────────────────────────|─────────────|────────|──────────────
@@ -1244,18 +1244,18 @@ Doc                              | last_synced | status | phase
 03-database-layer                | ✅ present  | ✅     | ✅
 ...
 
-Docs needing backfill: <N> of <total>
+Docs needing upgrade: <N> of <total>
 Fields to add:
   last_synced — <N> docs
   status      — <N> docs
   phase       — <N> docs
 ```
 
-4. If 0 docs need backfill → report "All docs are up to date. Nothing to patch." and stop.
+4. If 0 docs need upgrade → report "All docs are up to date. Nothing to patch." and stop.
 
 ---
 
-### Phase BF2 — Infer Defaults (per doc)
+### Phase UP2 — Infer Defaults (per doc)
 
 For each doc that needs patching, infer sensible defaults. **Do NOT ask the user for each doc** — infer silently, then show the plan for confirmation.
 
@@ -1289,12 +1289,12 @@ The goal is the date the doc was last meaningfully worked on. Try in order:
 
 ---
 
-### Phase BF3 — Show Plan + Confirm
+### Phase UP3 — Show Plan + Confirm
 
 Present the inferred patches to the user before writing anything:
 
 ```
-🔧 MDD Backfill Plan
+🔧 MDD Upgrade Plan
 
 <N> docs will be patched. Fields shown are ADDITIONS only — existing fields are untouched.
 
@@ -1319,11 +1319,11 @@ Proceed? (yes / review each individually / cancel)
 
 If the user says **"review each individually"**: walk through each doc one at a time, showing the inferred values and asking "Accept / Edit / Skip" before patching.
 
-If the user says **"yes"**: proceed to Phase BF4 with all inferred values.
+If the user says **"yes"**: proceed to Phase UP4 with all inferred values.
 
 ---
 
-### Phase BF4 — Patch Docs
+### Phase UP4 — Patch Docs
 
 For each doc in the plan, patch the frontmatter block **non-destructively**:
 
@@ -1366,7 +1366,7 @@ Patching...
 
 ---
 
-### Phase BF5 — Verify + Rebuild Startup
+### Phase UP5 — Verify + Rebuild Startup
 
 After all patches are applied:
 
@@ -1375,7 +1375,7 @@ After all patches are applied:
 3. Report:
 
 ```
-✅ MDD Backfill Complete
+✅ MDD Upgrade Complete
 
 Docs patched:     <N>
 Fields added:
