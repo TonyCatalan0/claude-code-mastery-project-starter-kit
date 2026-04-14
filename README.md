@@ -933,8 +933,11 @@ One-time setup: installs the starter kit's global Claude config into `~/.claude/
 - One place to maintain, one place to update
 
 ```bash
-/install-global   # answer "yes" to the MDD global install prompt
+/install-global        # answer "yes" to the MDD global install prompt
+/install-global mdd    # update only the global MDD commands — skips everything else
 ```
+
+The `mdd` parameter is for when you've already run the full install once and just want to push an updated `/mdd` command to your global config. It overwrites `mdd.md` and `install-mdd.md` in `~/.claude/commands/` and nothing else.
 
 Then in any project, just run:
 ```bash

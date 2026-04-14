@@ -1,14 +1,55 @@
 ---
 description: Install global Claude config — merges into existing ~/.claude/ without overwriting
 scope: starter-kit
+argument-hint: "[mdd]"
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
 ---
 
 # Install Global Config
 
+**$ARGUMENTS**
+
 Install the starter kit's global Claude configuration into `~/.claude/`. This is a one-time setup that gives you security rules, hooks, and settings across ALL projects.
 
 **Smart merge:** If you already have a global config, this merges new content — it never overwrites your existing rules.
+
+## Step 0 — Check for Targeted Install
+
+If `$ARGUMENTS` is `mdd` (i.e. the user ran `/install-global mdd`):
+
+- **Skip Steps 1–3 entirely** — do not touch CLAUDE.md, settings.json, or hooks
+- Jump directly to **MDD-Only Install** below, then stop
+
+---
+
+## MDD-Only Install — `/install-global mdd`
+
+Update the globally installed MDD commands in `~/.claude/commands/` without touching any other global config. Use this whenever the `/mdd` command has been updated in the starter kit and you want to push the new version to your global install.
+
+```bash
+mkdir -p ~/.claude/commands
+
+[ -f ~/.claude/commands/mdd.md ] && echo "MDD_EXISTS" || echo "MDD_CLEAN"
+[ -f ~/.claude/commands/install-mdd.md ] && echo "INSTALL_MDD_EXISTS" || echo "INSTALL_MDD_CLEAN"
+```
+
+For each file (`mdd.md`, `install-mdd.md`):
+- If the file **already exists** → **overwrite** it with the version from `.claude/commands/` (this is an explicit update, no prompt needed)
+- If the file **does NOT exist** → copy it
+
+Report:
+```
+Global MDD Update
+==================
+  ✓ mdd.md — updated to latest version
+  ✓ install-mdd.md — updated to latest version
+
+/mdd is now current in every project on this machine.
+```
+
+**Stop here** — no further steps.
+
+---
 
 ## Step 1 — Check What Exists
 

@@ -47,6 +47,7 @@
 | `/show-user-guide` | Open the comprehensive User Guide in your browser |
 | **Setup** | |
 | `/install-global` | Install/merge global Claude config into `~/.claude/` (one-time, never overwrites) |
+| `/install-global mdd` | Update only the global MDD commands (`mdd.md`, `install-mdd.md`) — skips all other config |
 | `/install-mdd [path]` | Install MDD workflow into any existing project — copies `/mdd` command + scaffolds `.mdd/` |
 | `/setup` | Interactive .env configuration — GitHub, database, Docker, analytics, RuleCatch |
 | `/setup --reset` | Re-configure everything from scratch |
