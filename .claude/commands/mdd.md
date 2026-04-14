@@ -98,6 +98,7 @@ Parse `$ARGUMENTS` to determine the mode:
 - If arguments start with `deprecate` → **Deprecate Mode** (jump to Phase D)
 - If arguments start with `reverse-engineer` or `reverse` → **Reverse-Engineer Mode** (jump to Phase R)
 - If arguments start with `graph` → **Graph Mode** (jump to Phase G)
+- If arguments start with `backfill` → **Backfill Mode** (jump to Phase BF)
 - If arguments are empty → ask the user what they want to do
 - Otherwise → **Build Mode** (the default — jump to Phase 1)
 
@@ -1214,6 +1215,177 @@ Issues:
 ```
 
 Save the graph to `.mdd/audits/graph-<date>.md`.
+
+---
+
+## BACKFILL MODE — `/mdd backfill`
+
+Triggered when arguments start with `backfill`.
+
+Batch-patches missing frontmatter fields (`last_synced`, `status`, `phase`) across ALL `.mdd/docs/*.md` files without touching doc content. Safe to run multiple times — already-present fields are never overwritten.
+
+**Use case:** projects that used MDD before these fields were introduced, or after importing docs from another project. Running `/mdd backfill` converts all UNTRACKED docs to IN SYNC in one pass.
+
+---
+
+### Phase BF1 — Inventory
+
+1. Glob `.mdd/docs/*.md` (and `.mdd/docs/archive/*.md` if it exists). Collect all paths.
+2. For each doc, read its frontmatter only (up to the closing `---` line).
+3. Build an inventory table:
+
+```
+📋 Backfill Inventory
+
+Doc                              | last_synced | status | phase
+─────────────────────────────────|─────────────|────────|──────────────
+01-project-scaffolding           | ❌ missing  | ❌     | ❌
+02-profile-system                | ❌ missing  | ✅     | ❌
+03-database-layer                | ✅ present  | ✅     | ✅
+...
+
+Docs needing backfill: <N> of <total>
+Fields to add:
+  last_synced — <N> docs
+  status      — <N> docs
+  phase       — <N> docs
+```
+
+4. If 0 docs need backfill → report "All docs are up to date. Nothing to patch." and stop.
+
+---
+
+### Phase BF2 — Infer Defaults (per doc)
+
+For each doc that needs patching, infer sensible defaults. **Do NOT ask the user for each doc** — infer silently, then show the plan for confirmation.
+
+**`last_synced` inference:**
+
+The goal is the date the doc was last meaningfully worked on. Try in order:
+
+1. Check `git log --format="%as" --follow -- ".mdd/docs/<doc-file>.md" | head -1`  
+   → Use the most recent commit date for that doc file.
+2. If no git history (brand-new file not yet committed), use today's date.
+3. If git is unavailable, use today's date.
+
+**`status` inference:**
+
+1. Check the `phase` field (if it already exists):
+   - phase contains `all` → `complete`
+   - phase contains `implementation` or `6` → `in_progress`
+   - phase contains `draft` or `1`–`3` → `draft`
+2. No existing phase → check the doc title/purpose section for keywords:
+   - Contains "reverse-engineered" → `complete`
+   - File is in `archive/` → `deprecated`
+   - Otherwise → `complete` (most pre-existing docs represent finished features)
+3. Default: `complete`
+
+**`phase` inference:**
+
+1. If `status` resolved to `complete` → `all`
+2. If `status` resolved to `in_progress` → `implementation`
+3. If `status` resolved to `draft` → `documentation`
+4. If `status` resolved to `deprecated` → `deprecated`
+
+---
+
+### Phase BF3 — Show Plan + Confirm
+
+Present the inferred patches to the user before writing anything:
+
+```
+🔧 MDD Backfill Plan
+
+<N> docs will be patched. Fields shown are ADDITIONS only — existing fields are untouched.
+
+  01-project-scaffolding.md
+    + last_synced: 2025-11-14   (from git: last commit on this doc)
+    + status: complete          (inferred: pre-existing doc, no phase field)
+    + phase: all                (inferred: status → complete)
+
+  02-profile-system.md
+    + last_synced: 2025-12-03   (from git: last commit on this doc)
+    + phase: all                (inferred: status already 'complete')
+
+  09-integrations.md
+    + last_synced: 2026-01-17   (from git: last commit on this doc)
+    + status: complete
+    + phase: all
+
+  ... (<N> more)
+
+Proceed? (yes / review each individually / cancel)
+```
+
+If the user says **"review each individually"**: walk through each doc one at a time, showing the inferred values and asking "Accept / Edit / Skip" before patching.
+
+If the user says **"yes"**: proceed to Phase BF4 with all inferred values.
+
+---
+
+### Phase BF4 — Patch Docs
+
+For each doc in the plan, patch the frontmatter block **non-destructively**:
+
+**Rules:**
+- Read the full file
+- Locate the opening `---` line and the closing `---` line
+- Parse all existing frontmatter key-value pairs
+- Add ONLY the missing fields — never modify existing ones
+- Write the patched frontmatter back, preserving all existing fields and the doc body exactly
+
+**Frontmatter field order** (when inserting):
+```yaml
+---
+id: ...
+title: ...
+edition: ...
+depends_on: [...]
+source_files: [...]
+routes: [...]
+models: [...]
+test_files: [...]
+data_flow: ...
+last_synced: <new>    ← insert here if missing
+status: <new>         ← insert here if missing
+phase: <new>          ← insert here if missing
+known_issues: []
+---
+```
+
+Insert new fields **before** `known_issues` to keep the canonical order.
+
+Report progress as you go:
+```
+Patching...
+  ✅ 01-project-scaffolding.md — added last_synced, status, phase
+  ✅ 02-profile-system.md — added last_synced, phase
+  ✅ 03-database-layer.md — skipped (all fields present)
+  ...
+```
+
+---
+
+### Phase BF5 — Verify + Rebuild Startup
+
+After all patches are applied:
+
+1. Re-scan `.mdd/docs/*.md` — confirm 0 docs have missing `last_synced`
+2. Trigger the `.mdd/.startup.md` rebuild (same logic as Status Mode)
+3. Report:
+
+```
+✅ MDD Backfill Complete
+
+Docs patched:     <N>
+Fields added:
+  last_synced — <N> docs
+  status      — <N> docs
+  phase       — <N> docs
+Docs skipped:     <N> (all fields already present)
+
+Run `/mdd scan` to see current drift status across all docs.
+```
 
 ---
 

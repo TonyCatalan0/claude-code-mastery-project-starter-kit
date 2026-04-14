@@ -396,7 +396,10 @@
 /mdd graph
 
 # Archive a deprecated feature cleanly
-/mdd deprecate 03</code></pre>
+/mdd deprecate 03
+
+# Fix all UNTRACKED docs in one pass (missing last_synced/status/phase)
+/mdd backfill</code></pre>
 
         <h3>Build Mode &mdash; New Features</h3>
         <p>When you run <code>/mdd &lt;feature description&gt;</code>, Claude follows a structured 7-phase process:</p>
@@ -429,6 +432,7 @@
           <li><strong><code>/mdd reverse-engineer [path|id]</code></strong> &mdash; Generates MDD docs from existing code. Works on undocumented files (new doc) or existing docs (regenerate + compare). Parallelized for multi-file scope: ≤3 files read in main conversation; 4+ files batched across up to 3 Explore agents returning structured inference output (purpose, models, routes, rules, edge cases), synthesized into the doc draft. In regenerate mode, shows old vs new side-by-side so you can merge rather than overwrite.</li>
           <li><strong><code>/mdd graph</code></strong> &mdash; Renders an ASCII dependency map from <code>depends_on</code> fields. Flags broken dependencies (deprecated features still referenced), risky dependencies (complete features depending on draft/in-progress ones), and orphans.</li>
           <li><strong><code>/mdd deprecate &lt;feature-id&gt;</code></strong> &mdash; Retires a feature: sets <code>status: deprecated</code>, moves doc to <code>.mdd/docs/archive/</code>, adds known-issue warnings to all dependents, and optionally deletes source and test files (asks separately for each).</li>
+          <li><strong><code>/mdd backfill</code></strong> &mdash; Batch-patches missing <code>last_synced</code>, <code>status</code>, and <code>phase</code> frontmatter fields across all <code>.mdd/docs/</code> files. Non-destructive &mdash; existing fields are never overwritten. <code>last_synced</code> is inferred from <code>git log</code> on each doc file (preserving actual history, not defaulting to today). Shows a full plan before writing. <strong>Run this once if the MDD Dashboard shows all docs as UNTRACKED (&#10067;)</strong> &mdash; it converts them all to IN SYNC in a single pass.</li>
         </ul>
 
         <h3>The <code>.mdd/</code> Directory</h3>
