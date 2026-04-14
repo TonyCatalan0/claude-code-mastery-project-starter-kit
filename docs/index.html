@@ -416,7 +416,7 @@
         <p>When you run <code>/mdd audit</code>, Claude runs a complete security and quality audit:</p>
         <ol style="line-height: 1.8;">
           <li><strong>Scope</strong> &mdash; Reads all <code>.mdd/docs/</code> files, builds the feature map</li>
-          <li><strong>Read + Notes</strong> &mdash; Reads all source files, writes notes every 2 features (survives context compaction)</li>
+          <li><strong>Read + Notes</strong> &mdash; Parallelized: features batched across up to 3 parallel Explore agents, each reading assigned source files and returning structured notes; main conversation is single writer. Single-feature audits stay sequential. Notes written to disk so findings survive context compaction.</li>
           <li><strong>Analyze</strong> &mdash; Reads only the notes (not source code again), produces findings report</li>
           <li><strong>Present</strong> &mdash; Shows top issues with severity, estimated fix time, asks what to fix</li>
           <li><strong>Fix</strong> &mdash; Applies fixes from the report, writes tests, updates documentation</li>
@@ -424,9 +424,9 @@
 
         <h3>New Modes &mdash; Drift Detection &amp; Doc Lifecycle</h3>
         <ul style="line-height: 1.8;">
-          <li><strong><code>/mdd scan</code></strong> &mdash; Detects documentation drift. Uses <code>git log --after="&lt;last_synced&gt;"</code> on each registered source file to find code that changed outside the MDD workflow. Reports ✅ in sync / ⚠️ drifted / ❌ broken / ❓ untracked. The fix for drift is <code>/mdd update</code>.</li>
+          <li><strong><code>/mdd scan</code></strong> &mdash; Detects documentation drift. Parallelized: a single Explore agent runs all <code>git log --after="&lt;last_synced&gt;"</code> checks in one pass and returns a classification table, eliminating the sequential bottleneck on large feature sets. Reports ✅ in sync / ⚠️ drifted / ❌ broken / ❓ untracked. The fix for drift is <code>/mdd update</code>.</li>
           <li><strong><code>/mdd update &lt;feature-id&gt;</code></strong> &mdash; Re-syncs an existing feature doc after code has changed. Diffs code vs doc, presents what changed, rewrites only the affected sections, appends new test skeletons for new behaviors, and updates <code>last_synced</code> in frontmatter.</li>
-          <li><strong><code>/mdd reverse-engineer [path|id]</code></strong> &mdash; Generates MDD docs from existing code. Works on undocumented files (new doc) or existing docs (regenerate + compare). In regenerate mode, shows old vs new side-by-side so you can merge rather than overwrite.</li>
+          <li><strong><code>/mdd reverse-engineer [path|id]</code></strong> &mdash; Generates MDD docs from existing code. Works on undocumented files (new doc) or existing docs (regenerate + compare). Parallelized for multi-file scope: ≤3 files read in main conversation; 4+ files batched across up to 3 Explore agents returning structured inference output (purpose, models, routes, rules, edge cases), synthesized into the doc draft. In regenerate mode, shows old vs new side-by-side so you can merge rather than overwrite.</li>
           <li><strong><code>/mdd graph</code></strong> &mdash; Renders an ASCII dependency map from <code>depends_on</code> fields. Flags broken dependencies (deprecated features still referenced), risky dependencies (complete features depending on draft/in-progress ones), and orphans.</li>
           <li><strong><code>/mdd deprecate &lt;feature-id&gt;</code></strong> &mdash; Retires a feature: sets <code>status: deprecated</code>, moves doc to <code>.mdd/docs/archive/</code>, adds known-issue warnings to all dependents, and optionally deletes source and test files (asks separately for each).</li>
         </ul>
