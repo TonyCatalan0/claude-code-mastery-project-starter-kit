@@ -277,7 +277,7 @@ The `mdd` package is a companion terminal dashboard for MDD workspaces. Run it i
 ![MDD Dashboard — terminal TUI showing feature docs, drift status, and doc content](docs/screenshots/mdd_dashboard.png)
 
 ```bash
-npm install -g mdd
+npm install -g mdd-tui
 ```
 
 Then inside any project with a `.mdd/` folder:
