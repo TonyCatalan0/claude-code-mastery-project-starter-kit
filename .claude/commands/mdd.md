@@ -636,23 +636,47 @@ If no section, audit the entire project.
    - If "scan": read all source files and generate documentation files (Phase 0)
    - If "manual": exit and let the user create docs per feature
 
-### Phase A2 — Read + Notes
+### Phase A2 — Read + Notes (parallelized)
 
-For each feature (or the specified section):
+**Single-feature audit** (`/mdd audit <section>`): read source files directly in the main conversation, write notes immediately — no agent overhead for one feature.
 
-1. Read ALL source files listed in the documentation's `source_files` frontmatter
-2. Write notes to `.mdd/audits/notes-<date>.md`
-3. **CRITICAL: Write every 2 features** — do not accumulate in memory
+**Full audit** (no section specified): use batched parallel Explore agents to read source files for all features simultaneously.
 
-Note format per feature:
-```markdown
-### [<NN>] <Feature Name>
-**Files read:** <list>
-**Findings:**
-- <severity emoji> <finding description>
-**Test coverage:** <existing test count> / <endpoint count>
-**Doc accuracy:** <any discrepancies between docs and code>
+#### Batch sizing
+
+Divide all features into batches based on count:
+- 1–3 features: 1 agent (or main conversation if ≤ 2)
+- 4–6 features: 2 agents, batches of 2–3
+- 7+ features: 3 agents (max), batches of ~equal size
+
+#### Agent instructions (each must be self-contained)
+
+Each agent receives:
+- Its assigned feature docs (full frontmatter + all sections)
+- The exact `source_files` list to read
+- The note format template (below)
+- Explicit instruction: **read the source files and return structured notes — do NOT write any files**
+
+#### What each agent returns
+
+One block per assigned feature:
 ```
+### [<NN>] <Feature Name>
+**Files read:** <list of files actually read>
+**Findings:**
+- 🔴 CRITICAL: <description>
+- 🟠 HIGH: <description>
+- 🟡 MEDIUM: <description>
+- 🔵 LOW: <description>
+**Test coverage:** <existing test count> / <endpoint count>
+**Doc accuracy:** <discrepancies between doc and code, or "accurate">
+```
+
+#### Main conversation: write notes file
+
+After ALL agents return, write their output to `.mdd/audits/notes-<date>.md` in one pass — the main conversation is the single writer. Do not write partial notes; wait for all agents first.
+
+**Fallback:** If any agent fails, process that batch sequentially in the main conversation using the same note format. Never surface agent failures to the user unless all batches fail.
 
 ### Phase A3 — Analyze
 
@@ -795,21 +819,52 @@ Read every `.mdd/docs/*.md` (excluding `archive/`). For each, extract:
 - `last_synced` from frontmatter
 - `source_files` list from frontmatter
 
-### Phase SC2 — Check each feature for drift
+### Phase SC2 — Check each feature for drift (parallelized)
 
-For each feature, classify it:
+After Phase SC1 has the full feature list (IDs, `last_synced`, `source_files`), delegate all git log checks to a **single Explore agent** rather than running them sequentially in the main conversation.
 
-**Untracked** — `last_synced` is missing from frontmatter. No baseline to compare against.
+**Why a single agent (not multiple):** `git log` commands are individually fast — the bottleneck is issuing them one at a time in the main conversation. One agent can run all of them in quick succession and return a complete classification table.
 
-**Broken reference** — one or more `source_files` no longer exist on disk.
+#### Agent instructions (self-contained)
 
-**Possibly drifted** — `last_synced` exists and files exist. Run for each source file:
+The agent receives:
+- Complete feature list: each feature's ID, `last_synced` date, and `source_files`
+- Classification rules (below)
+- Explicit instruction: run the git checks and return a structured table — do NOT write any files
+
+For each feature, the agent runs:
 ```bash
+# Check file existence
+ls <source_file> 2>/dev/null
+
+# Check for commits after last_synced (only if files exist)
 git log --oneline --after="<last_synced>" -- <source_file>
 ```
-If any output is returned, commits exist after the last sync → possibly drifted. Write the commit count and most recent commit message for context.
 
-**In sync** — `last_synced` exists, all files exist, no commits after `last_synced`.
+#### What the agent returns
+
+A classification table — one row per feature:
+
+```
+| Feature ID | Classification | Detail |
+|---|---|---|
+| 01-project-scaffolding | in_sync | last synced: 2026-03-15, no commits after |
+| 04-content-builder | drifted | 3 commits since 2026-03-01, latest: "fix: heading parser" |
+| 07-github-pages | broken | docs/index.html not found on disk |
+| 09-integrations | untracked | no last_synced field |
+```
+
+**Classifications:**
+- **untracked** — `last_synced` missing from frontmatter
+- **broken** — one or more `source_files` not found on disk
+- **drifted** — `last_synced` exists, files exist, commits found after `last_synced`
+- **in_sync** — `last_synced` exists, all files exist, no commits after `last_synced`
+
+#### Main conversation: build drift report
+
+After the agent returns its table, the main conversation writes the drift report. No file writes happen inside the agent.
+
+**Fallback:** If the agent fails, run git checks sequentially in the main conversation using the same logic.
 
 ### Phase SC3 — Present drift report
 
@@ -978,15 +1033,47 @@ Triggered when arguments start with `reverse-engineer` or `reverse`. Generates o
 - Cross-reference against `source_files` fields in all `.mdd/docs/*.md`.
 - List files not registered in any doc. Ask the user which ones to document.
 
-### Phase R2 — Read source files
+### Phase R2 — Read source files (parallelized for multi-file scope)
 
-Read each identified source file. For each, infer:
+**Threshold rule:**
+- ≤ 3 source files: read directly in the main conversation — no agent overhead
+- 4+ source files: batch into parallel Explore agents (max 3), each reading a subset
+
+**When parallelism applies:** Primarily the no-argument case — scanning `src/` for undocumented files can surface many files at once. A single feature with many source files (e.g., a large module) also qualifies.
+
+#### Agent instructions (self-contained)
+
+Each agent receives:
+- Its assigned file paths
+- The inference checklist below
+- Explicit instruction: read the files and return structured inference output — do NOT write any files
+
+For each assigned file, infer:
 - **Purpose:** What does this file do? What problem does it solve?
 - **Data models:** TypeScript interfaces, types, Zod schemas
 - **API routes:** Express/Fastify/etc. route definitions and their handlers
 - **Business rules:** Conditional logic, validation, state transitions
 - **Dependencies:** What other modules does it import?
 - **Edge cases:** Error handling patterns, guard clauses
+
+#### What each agent returns
+
+One block per assigned file:
+```
+File: <path>
+Purpose: <1–2 sentences>
+Data models: <list of types/interfaces with key fields>
+API routes: <list of routes with method + path>
+Business rules: <key validation, state logic>
+Dependencies: <imports from other project modules>
+Edge cases: <error handlers, guard clauses>
+```
+
+#### Main conversation: synthesize
+
+After all agents return, synthesize their output into Phase R3 (draft the doc). The main conversation is the only one that writes files.
+
+**Fallback:** If any agent fails, read that batch of files directly in the main conversation.
 
 ### Phase R3 — Draft the doc
 
