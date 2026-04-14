@@ -292,7 +292,7 @@ mdd status       # same — all three open the dashboard
 
 The dashboard auto-detects drift by running `git log` against each doc's `last_synced` frontmatter field. Docs whose `source_files` have changed since last sync are marked ⚠️ drifted.
 
-> **Install automatically:** `/install-mdd` copies the MDD workflow into an existing project. The global install command `/install-global` installs `mdd` dashboard globally as part of the MDD setup.
+> **Recommended: install MDD globally.** Run `/install-global` once and answer "yes" to the MDD prompt — `/mdd` is then available in every project on your machine with no per-project setup. Update the starter kit once and every project picks up the new version automatically on the next session. When you run `/mdd` for the first time in a fresh project, it auto-creates the `.mdd/` structure (docs, audits, `.startup.md`) — no separate `/install-mdd` step needed.
 
 ---
 
@@ -911,10 +911,26 @@ Scans your actual code and generates ASCII diagrams automatically:
 
 Writes to `project-docs/ARCHITECTURE.md` and `project-docs/INFRASTRUCTURE.md`. Uses ASCII box-drawing — works everywhere, no external tools needed. Add `--update` to write without asking.
 
-### `/install-global`
+### `/install-global` ⭐ Recommended for MDD
 
-One-time setup: installs the starter kit's global Claude config into `~/.claude/`. Also asks if you want to install MDD globally — copies `/mdd` and `/install-mdd` to `~/.claude/commands/` so they're available from any project.
+One-time setup: installs the starter kit's global Claude config into `~/.claude/`. Also asks if you want to install MDD globally — **say yes**.
 
+**Why global is the right choice for MDD:**
+- `/mdd` becomes available in **every project** on your machine — no per-project setup
+- Update the starter kit once → all projects automatically use the latest `/mdd` version on the next session
+- First `/mdd` run in any project **auto-bootstraps** the `.mdd/` structure (docs, audits, `.startup.md`, gitignore entry) — no separate `/install-mdd` needed
+- One place to maintain, one place to update
+
+```bash
+/install-global   # answer "yes" to the MDD global install prompt
+```
+
+Then in any project, just run:
+```bash
+/mdd <feature>    # .mdd/ structure is created automatically on first use
+```
+
+Other things `/install-global` installs:
 - **Smart merge** — if you already have a global `CLAUDE.md`, it appends missing sections without overwriting yours
 - **settings.json** — merges deny rules and hooks (never removes existing ones)
 - **Hooks** — copies `block-secrets.py`, `verify-no-secrets.sh`, and `check-rulecatch.sh` to `~/.claude/hooks/`
@@ -923,7 +939,7 @@ Reports exactly what was added, skipped, and merged. Your existing config is nev
 
 ### `/install-mdd [path]`
 
-Install the MDD workflow into any existing project — copies the `/mdd` slash command and scaffolds the `.mdd/docs/`, `.mdd/audits/`, and `.mdd/.startup.md` structure. Works on any stack, any project. Pass a path or run from within the target project.
+Install the MDD workflow into a specific project explicitly — copies the `/mdd` slash command and scaffolds the `.mdd/` structure. Use this when you want the structure set up upfront (e.g. before a team session, or to configure gitignore before the first run). If you've already installed MDD globally, you don't need this — `/mdd` bootstraps itself.
 
 ```bash
 /install-mdd                        # install into current project

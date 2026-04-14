@@ -783,7 +783,8 @@ cp .env.example .env</code></pre>
             <h3>Set Up Global Config (One Time)</h3>
             <pre class="language-bash"><code class="language-bash"># Run the install command — smart merges into existing config
 /install-global</code></pre>
-            <p>This installs global CLAUDE.md rules, settings.json hooks, and enforcement scripts (<code>block-secrets.py</code>, <code>verify-no-secrets.sh</code>, <code>check-rulecatch.sh</code>) into <code>~/.claude/</code>. If you already have a global config, it merges without overwriting.</p>
+            <p>This installs global CLAUDE.md rules, settings.json hooks, and enforcement scripts into <code>~/.claude/</code>. If you already have a global config, it merges without overwriting.</p>
+            <p style="margin-top: 0.6rem; padding: 0.6rem 0.8rem; background: rgba(99,102,241,0.08); border-radius: 6px; font-size: 0.88em;"><strong>Say yes to the MDD global install prompt.</strong> This copies <code>/mdd</code> to <code>~/.claude/commands/</code> so it&rsquo;s available in every project — no per-project setup required. Update the starter kit once and all projects pick up the new <code>/mdd</code> version automatically. Running <code>/mdd</code> for the first time in any project auto-creates the <code>.mdd/</code> structure.</p>
             <details>
               <summary>Manual setup (if you prefer)</summary>
               <pre class="language-bash"><code class="language-bash">cp global-claude-md/CLAUDE.md ~/.claude/CLAUDE.md
@@ -1369,21 +1370,24 @@ fi</code></pre>
             <p>Writes to <code>project-docs/ARCHITECTURE.md</code> and <code>project-docs/INFRASTRUCTURE.md</code>. Uses ASCII box-drawing — works everywhere, no external tools needed. Add <code>--update</code> to write without asking.</p>
           </div>
 
-          <div class="command-card">
-            <h3><code>/install-global</code></h3>
-            <p class="command-desc">One-time setup: installs the starter kit's global Claude config into <code>~/.claude/</code>. Also asks if you want to install MDD globally.</p>
+          <div class="command-card" style="border-left: 3px solid var(--accent, #6366f1);">
+            <h3><code>/install-global</code> <span style="font-size: 0.7em; background: var(--accent, #6366f1); color: #fff; padding: 0.15em 0.5em; border-radius: 4px; vertical-align: middle; font-weight: 600;">Recommended for MDD</span></h3>
+            <p class="command-desc">One-time setup that makes <code>/mdd</code> available in <strong>every project</strong> on your machine. Say yes to the MDD prompt.</p>
+            <p style="margin: 0.5rem 0; padding: 0.6rem 0.8rem; background: var(--surface-2, rgba(99,102,241,0.08)); border-radius: 6px; font-size: 0.88em; line-height: 1.6;">
+              <strong>Why global?</strong> Install once &rarr; use everywhere. Update the starter kit once &rarr; all projects automatically get the latest <code>/mdd</code> on the next session. When you run <code>/mdd</code> for the first time in any project, it auto-creates the <code>.mdd/</code> structure (docs, audits, startup file, gitignore entry) &mdash; no separate <code>/install-mdd</code> needed per project.
+            </p>
             <ul>
               <li><strong>Smart merge</strong> &mdash; if you already have a global <code>CLAUDE.md</code>, it appends missing sections without overwriting yours</li>
               <li><strong>settings.json</strong> &mdash; merges deny rules and hooks (never removes existing ones)</li>
               <li><strong>Hooks</strong> &mdash; copies <code>block-secrets.py</code>, <code>verify-no-secrets.sh</code>, and <code>check-rulecatch.sh</code> to <code>~/.claude/hooks/</code></li>
-              <li><strong>Optional MDD global install</strong> &mdash; copies <code>/mdd</code> and <code>/install-mdd</code> to <code>~/.claude/commands/</code></li>
+              <li><strong>MDD global install</strong> &mdash; copies <code>/mdd</code> and <code>/install-mdd</code> to <code>~/.claude/commands/</code> (say yes to this prompt)</li>
             </ul>
             <p>Reports exactly what was added, skipped, and merged. Your existing config is never overwritten.</p>
           </div>
 
           <div class="command-card">
             <h3><code>/install-mdd [path]</code></h3>
-            <p class="command-desc">Install the MDD workflow into any existing project &mdash; no full starter kit required.</p>
+            <p class="command-desc">Install the MDD workflow into a specific project explicitly &mdash; use this for team setups or when you want the structure in place before the first run. If you&rsquo;ve installed MDD globally, <code>/mdd</code> bootstraps itself and you don&rsquo;t need this.</p>
             <ul>
               <li>Copies the <code>/mdd</code> slash command to <code>.claude/commands/</code></li>
               <li>Scaffolds <code>.mdd/docs/</code>, <code>.mdd/audits/</code>, and <code>.mdd/.startup.md</code></li>
