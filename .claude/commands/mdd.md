@@ -2,7 +2,7 @@
 description: "MDD workflow — Document → Audit → Fix → Verify. Build features or audit existing code using Manual-First Development."
 scope: project
 argument-hint: "<feature-description> or audit [section]"
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, AskUserQuestion
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, AskUserQuestion, Agent
 ---
 
 # MDD — Manual-First Development Workflow
@@ -51,12 +51,17 @@ Parse `$ARGUMENTS` to determine the mode:
 
 Read the user's description: **$ARGUMENTS**
 
-Before writing anything, gather context:
+Before writing anything, gather context using **3 parallel Explore agents**. Launch all three simultaneously — do not wait for one before starting the others:
 
-1. **Read `CLAUDE.md`** — understand project rules and architecture
-2. **Read `project-docs/ARCHITECTURE.md`** — understand system structure
-3. **Scan `.mdd/docs/`** — see what features already exist
-4. **Scan `src/`** — understand current codebase structure
+**Agent A (Rules):** Read `CLAUDE.md` and `project-docs/ARCHITECTURE.md`. Return: key coding rules, quality gates, port assignments, architecture summary, any project-specific conventions relevant to this feature.
+
+**Agent B (Features):** Glob `.mdd/docs/*.md` and read each. Return: list of existing feature IDs + titles + status + `depends_on` chains. Flag any features that might relate to `$ARGUMENTS`.
+
+**Agent C (Codebase):** Glob `src/**/*` and list files. Return: directory structure, key files per subdirectory, detected tech stack (framework, DB, test runner).
+
+**Agent prompt requirements (each must be self-contained):** Include the feature description (`$ARGUMENTS`), the project working directory, and an explicit instruction to return a concise summary — not raw file contents. This prevents context explosion.
+
+**After all 3 return:** synthesize into a working context in the main conversation. If any agent fails, silently fall back to direct `Read`/`Glob` for that agent's data — never surface agent failures to the user unless all 3 fail.
 
 **Detect task type before asking questions.** If `src/` has fewer than 3 TypeScript/source files AND the feature description contains words like `workflow`, `command`, `config`, `docs`, `tooling`, `hook`, `script`, or `prompt` — mark as a **tooling task** and skip the database and API questions entirely.
 
@@ -221,8 +226,7 @@ Wait for confirmation before proceeding.
 
 Read the documentation file created in Phase 3. From the endpoints, business rules, and edge cases documented, generate test skeletons.
 
-**Create test file at:** `tests/unit/<feature-name>.test.ts`
-
+**Skeleton template (unit):**
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -250,7 +254,23 @@ describe('<Feature Name>', () => {
 - NO implementation yet — just the structure from the docs
 - Include the exact response shapes and status codes from the documentation
 
-**If E2E tests are needed** (the feature has UI): also create `tests/e2e/<feature-name>.spec.ts` with Playwright skeletons following the same pattern.
+**Parallelization rule:**
+- If BOTH unit AND E2E tests are needed → launch 2 parallel `general-purpose` agents. Each receives: the full MDD doc content, the skeleton template above, project testing conventions, and the exact output file path. Agent A writes `tests/unit/<feature-name>.test.ts`, Agent B writes `tests/e2e/<feature-name>.spec.ts`. These are different files — no write conflict is possible.
+- If only unit tests needed → generate directly in the main conversation (no agent overhead for a single file).
+
+**E2E skeleton template (if applicable):**
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('<Feature Name>', () => {
+  test('should <expected user flow from docs>', async ({ page }) => {
+    // Navigate
+    // Interact
+    // Assert
+    test.fail(); // Not implemented — MDD skeleton
+  });
+});
+```
 
 Tell the user:
 ```
@@ -262,91 +282,343 @@ These tests will FAIL until implementation is complete.
 That's the point — they're the finish line.
 ```
 
+---
+
+### Phase 4b — Red Gate (mandatory)
+
+**No skip condition.** This phase runs after every skeleton generation, every time.
+
+Run ONLY the new test file(s) — not the full suite:
+
+```bash
+pnpm test:unit -- <path/to/new-test-file>
+```
+
+If E2E skeletons were generated, also run:
+```bash
+pnpm test:e2e:chromium -- <path/to/new-e2e-file>
+```
+
+**For each test result:**
+
+- **FAIL (expected):** ✓ — skeleton confirmed red
+- **PASS (unexpected):** investigate immediately before proceeding
+  - No real assertion (empty `it` body, or `expect.fail` was removed)? Fix the skeleton to add proper assertion — do NOT adjust the test to pass, write the assertion correctly.
+  - Pre-existing code already satisfies the test? Adjust the skeleton to test the new behavior specifically, and document the overlap in the MDD doc's `known_issues`.
+  - Test file itself has a syntax error that's causing a false skip? Fix the syntax.
+
+**Gate:** ALL tests must fail before proceeding to Phase 5. Block until confirmed red.
+
+Report to the user:
+```
+🔴 Red Gate: <N>/<N> failing (expected)
+   All skeletons confirmed RED — ready to implement.
+```
+
+If any test passes unexpectedly and the fix isn't trivial, ask the user:
+```
+⚠️  Red Gate: <N>/<N> failing, <N> passing unexpectedly.
+   Test(s) passing: <test name(s)>
+   Diagnosis: <what's happening>
+   Proposed fix: <skeleton adjustment>
+   Proceed with fix? (yes / adjust differently / stop)
+```
+
 ### Phase 5 — Present the Build Plan
 
-Before writing any implementation code, present a clear plan:
+**Auto-detect feature size** before choosing plan format:
 
+- **Simple** — fewer than 3 new files, no API routes, no database: use flat steps (block overhead not warranted)
+- **Medium or Large** — anything else: use block structure
+
+#### Block structure (medium/large features)
+
+Each block is a unit of work that satisfies three criteria:
+1. **Runnable end-state** — after the block completes, code compiles, tests pass, no half-open interfaces
+2. **Commit-worthy scope** — the block has a clear "why" that justifies a standalone conventional commit
+3. **Own verification** — a concrete command that proves the block is done
+
+**Block template:**
+```
+Block N (Name) [small | medium | large]
+  End-state:    <what is compilable and runnable when this block finishes>
+  Commit scope: <conventional commit one-liner, e.g. "feat: add order types and DB schema">
+  Verify:       <exact command — e.g. pnpm typecheck or pnpm test:unit -- --grep "orders">
+  Handoff:      <what the next block expects to exist when this one finishes>
+  Runs in:      main conversation | parallel agents (N)
+
+  Steps:
+    1. <specific file action — e.g. Create src/types/orders.ts — Order, OrderStatus, OrderLine>
+    2. <specific file action>
+```
+
+**Large block rule:** Must include `Justification: <why this block cannot be split>`. A valid justification is a shared type contract that forces backend + frontend into one atomic change. If the justification doesn't hold, auto-suggest the split before the user confirms.
+
+**Parallelization annotation:**
+Before assigning `Runs in: parallel agents`, verify both gates:
+1. **File declaration gate:** List every file each parallel agent will write. If any file appears in more than one agent's list → mark as `Runs in: main conversation`. No exceptions.
+2. **Type dependency gate:** If Block X creates types that Block Y's code imports → Block X must run first (Block Y gets `Depends on Block X`, sequential).
+
+If both gates pass and the blocks are in the same dependency layer → mark as `Runs in: parallel agents (2)`.
+
+**Dependency layers** (used to sequence blocks):
+```
+Layer 1 (no dependencies):      Types, shared interfaces
+Layer 2 (depends on Layer 1):   Services, components, handlers
+Layer 3 (depends on Layer 2):   Route wiring, integration points
+Layer 4 (depends on all):       Test implementation, final wiring
+```
+
+**Build plan display:**
 ```
 🔨 MDD Build Plan for: <Feature Name>
 
 Documentation: .mdd/docs/<NN>-<feature-name>.md ✅
 Test skeletons: <N> tests across <N> files ✅
+Red Gate: <N>/<N> confirmed red ✅
 
-Implementation steps:
-  Step 1 (<name>): <what will be created> — est. <time>
-  Step 2 (<name>): <what will be created> — est. <time>
-  Step 3 (<name>): <what will be created> — est. <time>
-  ...
+Block 1 (Foundation) [small]  →  main conversation
+  End-state:    Shared types compile clean
+  Commit scope: feat: add <feature> types and interfaces
+  Verify:       pnpm typecheck
+  Handoff:      User, Order, OrderStatus exported from src/types/orders.ts
 
-Total files to create: <N>
-Total estimated time: <N> minutes
+Block 2 (Services) [medium]  →  parallel agents (2)
+  Backend sub-block:   src/handlers/orders.ts, src/adapters/orders.ts
+  Frontend sub-block:  src/components/OrderList.tsx, src/hooks/useOrders.ts
+  File overlap:        NONE — safe to parallelize
+  Each agent receives: Block 1 output + full MDD doc + project conventions
+
+Block 3 (Wiring) [small]  →  main conversation
+  End-state:    Route registered, feature reachable at /api/v1/orders
+  Commit scope: feat: wire orders route into server
+  Verify:       pnpm test:unit -- --grep "orders"
+  Handoff:      POST /api/v1/orders returns 201
+
+Block 4 (Tests) [small]  →  main conversation
+  End-state:    All <N> skeletons passing, no regressions
+  Commit scope: test: implement orders feature test suite
+  Verify:       pnpm test:unit
+
+Total blocks: <N> (<N> sequential, <N> parallel batch)
+Total new files: <N>
 Tests to satisfy: <N>
 
 Ready to build? (yes / modify plan / stop here)
 ```
 
-**Step naming is MANDATORY** — every step has a unique name so the user can reference it.
+**Step naming is MANDATORY** — every block has a unique name the user can reference when asking for changes.
 
-**Estimation rules:**
-- Types file: ~2 min
-- Handler with 5 CRUD ops: ~5 min
-- Route file (thin): ~3 min
-- Wiring into server: ~1 min
-- Test implementation: ~5 min per 10 tests
-- Complex business logic: ~10 min per function
+**Flat step format (simple features only):**
+```
+🔨 MDD Build Plan for: <Feature Name>
+
+Documentation: .mdd/docs/<NN>-<feature-name>.md ✅
+Test skeletons: <N> tests ✅  Red Gate: <N>/<N> red ✅
+
+Steps:
+  Step 1 (<name>): <what will be created>
+  Step 2 (<name>): <what will be created>
+
+Tests to satisfy: <N>
+
+Ready to build? (yes / modify plan / stop here)
+```
 
 Wait for user confirmation.
 
 ### Phase 6 — Implement (Test-Driven)
 
-For each step in the plan:
+#### Step 6a — Layered execution
 
-1. **Read the MDD doc** — refresh context on what this step needs
-2. **Read the test skeleton** for the relevant tests
-3. **Implement the code** that makes the tests pass
-4. **Run tests** after each step: `pnpm test:unit -- --grep "<feature>"`
-5. **Report progress:**
-   ```
-   Step 1 (Types): ✅ — src/types/<feature>.ts created
-   Step 2 (Handler): ✅ — 4/5 tests passing, fixing edge case...
-   Step 2 (Handler): ✅ — 5/5 tests passing
-   Step 3 (Routes): 🔄 in progress...
-   ```
+Execute blocks in dependency layer order (Layer 1 → 2 → 3 → 4). Within the same layer, blocks marked `Runs in: parallel agents (2)` run simultaneously. Blocks marked `Runs in: main conversation` run sequentially.
 
-**CRITICAL:** If a test fails, fix the implementation — NOT the test. The tests were generated from the documentation. If the test seems wrong, re-read the doc. If the doc is wrong, ask the user.
+**For parallel blocks:**
 
-After all steps complete:
+1. Verify file declaration gate one final time (list every file each agent writes — any overlap → fall back to sequential)
+2. Launch both agents simultaneously. Each agent prompt must be **completely self-contained** and include:
+   - The full MDD doc content (embedded, not referenced by path)
+   - The specific block description and steps
+   - ALL output from Layer 1 (types files — embed the file contents, do not reference paths)
+   - Project coding conventions from CLAUDE.md
+   - Exact output file paths
+   - Explicit instruction: write the implementation only, do not run tests or typecheck
+3. Collect both outputs
+4. Run `pnpm typecheck` before proceeding to the next layer
+5. If typecheck fails after a parallel batch: diagnose which agent's output is the cause before retrying. Fix in main conversation — do not re-launch agents blindly.
+
+**For sequential blocks:** read the MDD doc, read the relevant test skeletons, implement, run the Green Gate loop below.
+
+#### Step 6b — Green Gate loop (per block)
+
+After each block's implementation (sequential or parallel), run the Green Gate:
+
+```
+Green Gate — Block N (Name)
+
+Iteration 1–5:
+  Run: pnpm test:unit -- --grep "<feature>" AND pnpm typecheck
+
+  If ALL green:
+    → proceed to regression check
+
+  If failing:
+    DIAGNOSE (required before any fix):
+      - What is the exact error message, file, and line?
+      - Which implementation assumption was wrong?
+      - Is this a known pattern? (check CLAUDE.md, project conventions)
+      - What is the ONE targeted fix?
+    
+    FIX — implementation only:
+      - Tests are NEVER modified.
+      - If a test seems wrong → re-read the MDD doc first.
+      - If the doc seems wrong → STOP and ask the user before changing anything.
+    
+    REPORT ONE LINE per iteration:
+      "Iteration N — Root cause: <X> / Fix applied: <Y>"
+
+Iteration 5 exhausted, still failing:
+  STOP immediately. Do not attempt iteration 6.
+  Report to user:
+    "5 iterations reached. Still failing:
+       - <test name>: <diagnosis summary>
+       - <test name>: <diagnosis summary>
+     Options:
+       (a) continue debugging — I'll keep trying
+       (b) narrow scope — remove or defer these cases
+       (c) pause and review together"
+  Wait for user input.
+```
+
+**Regression check (after each block goes green):**
 
 ```bash
-pnpm typecheck     # Must pass
-pnpm test:unit     # All tests must pass (including pre-existing)
+pnpm test:unit  # full suite, including pre-existing tests
+```
+
+Any regression failure is treated as a new failure for the SAME block — it counts against the remaining iteration budget. This prevents regressions from being silently deprioritized.
+
+**Progress reporting:**
+```
+Block 1 (Foundation): ✅ — src/types/orders.ts created, typecheck clean
+Block 2 (Services):   🔄 parallel agents running...
+Block 2 (Services):   ✅ — 8/8 tests passing, no regressions
+Block 3 (Wiring):     🔄 in progress...
 ```
 
 ### Phase 7 — Verify + Report
 
-After implementation is complete:
+#### Phase 7a — Quality Gates
 
-1. **Run full test suite:** `pnpm test:unit`
-2. **Run typecheck:** `pnpm typecheck`
-3. **Update documentation** — add any `known_issues` discovered during implementation
-4. **Update CLAUDE.md** if new patterns were established
+```bash
+pnpm typecheck   # must pass — no errors
+pnpm test:unit   # all tests must pass (pre-existing + new)
+```
 
-Present the final report:
+These must both pass before proceeding to Phase 7b. If either fails here, return to Phase 6 (Green Gate) to fix.
 
+#### Phase 7b — Integration Verification
+
+Quality gates passing does not mean the feature works. This phase verifies actual behavior against the real runtime environment.
+
+**Detect feature type** from MDD doc frontmatter (`routes`, `models`, source file paths, feature description):
+
+**Backend feature** (has routes or handler files):
+```
+□ Start the server if not running
+□ Trigger the full happy-path request — real HTTP call, real DB, not mocked
+□ Watch backend logs during the run:
+    Any unexpected error, warning, or rate anomaly → investigate immediately
+□ Verify: response shape matches documented response shape
+□ Verify: response status code matches documented status code
+□ Verify: DB state changed as expected (run a direct query to confirm)
+□ Test at least one documented error case (bad input, missing auth, etc.)
+□ Verify: error response matches documented error response
+```
+
+**Frontend feature** (has component or UI files):
+```
+□ Open the target page in the browser
+□ Verify expected data is visible — "page loaded" is NOT sufficient
+□ Click through the documented user flow step by step
+□ Open network tab: confirm expected API calls are made
+□ Open network tab: confirm expected responses are received
+□ Check browser console: no errors or warnings from this feature's code
+□ Test an error state (bad input, empty state, etc.) — verify it renders correctly
+```
+
+**Database feature** (has schema or model changes):
+```
+□ Write: verify rows/documents actually written — direct DB query, not insert return value
+□ Read: verify reads return the expected data shape
+□ Constraints: test invalid data produces the documented error (not a silent failure)
+□ Performance: run EXPLAIN on primary query patterns — no full-table scans on large collections
+```
+
+**Tooling feature** (command, script, hook, or workflow):
+```
+□ Run against a real scenario — not contrived minimal input
+□ Verify output exactly matches documented behavior (check actual output against doc)
+□ Test documented error cases — verify each produces the documented error message
+□ Confirm no unintended side effects on unrelated files or state
+```
+
+**Ownership Default — applies to ALL feature types:**
+
+```
+Any external failure (API unreachable, DB missing test data, service slow, key not set)
+is a HYPOTHESIS — not an accepted fact — until empirically disproven.
+
+Required procedure before accepting any external blocker as real:
+  Step 1: Read backend logs in full — what did the server actually receive and return?
+  Step 2: Run a minimal probe — the smallest possible request or script targeting the real interface
+  Step 3: Form a specific, falsifiable hypothesis — "The failure is at X because Y shows Z"
+
+Default stance: "My code is wrong until proven otherwise."
+This takes ~1 minute and eliminates the entire class of wrong-attribution bugs
+where the agent patches the wrong thing because it accepted an external excuse too quickly.
+```
+
+#### Phase 7c — Completion Signal
+
+**If integration verified:**
 ```
 ✅ MDD Complete: <Feature Name>
 
 Documentation: .mdd/docs/<NN>-<feature-name>.md
 Data flow doc: .mdd/audits/flow-<feature-slug>-<date>.md (or "greenfield")
 Files created: <list>
+Blocks: <N>/<N> complete
 Tests: <N>/<N> passing
-Typecheck: Clean
+Integration: verified (<feature type> — real environment)
+Typecheck: clean
+
+Update doc: status → complete, phase → all, last_synced → <today>
 
 New patterns established: <any new rules worth adding to CLAUDE.md>
 
 Branch: feat/<feature-name>
 Ready for review — run `git diff main...HEAD` to see all changes.
 ```
+
+**If integration NOT verified (external condition blocked it):**
+```
+⏸️  MDD Blocked: <Feature Name>
+
+Blocked on:  <exact condition — e.g. "STRIPE_API_KEY not set in .env">
+Evidence:    <what was run and what it returned>
+Diagnosis:   <specific hypothesis about the cause>
+Next step:   <concrete action to unblock — e.g. "Add STRIPE_API_KEY to .env, then re-run Phase 7b">
+
+Code is complete. All <N> tests pass. Typecheck clean.
+Feature is NOT marked done until Phase 7b passes.
+Update doc: status → in_progress, phase → integration-pending
+
+When unblocked: resume at Phase 7b only. No re-implementation needed.
+```
+
+3. **Update documentation** — add any `known_issues` discovered during implementation
+4. **Update CLAUDE.md** if new patterns were established
 
 ---
 
