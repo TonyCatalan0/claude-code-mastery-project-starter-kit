@@ -1391,6 +1391,9 @@ fi</code></pre>
               <li><strong>MDD global install</strong> &mdash; copies <code>/mdd</code> and <code>/install-mdd</code> to <code>~/.claude/commands/</code> (say yes to this prompt)</li>
             </ul>
             <p>Reports exactly what was added, skipped, and merged. Your existing config is never overwritten.</p>
+            <p style="margin-top: 0.75rem;"><strong>Already set up? Update MDD only:</strong></p>
+            <pre class="language-bash"><code class="language-bash">/install-global mdd    # overwrites only mdd.md + install-mdd.md — skips everything else</code></pre>
+            <p style="font-size: 0.88em; color: var(--text-muted, #888);">Use this whenever the starter kit ships an updated <code>/mdd</code> command and you want to push it to your global install without re-running the full setup.</p>
           </div>
 
           <div class="command-card">
