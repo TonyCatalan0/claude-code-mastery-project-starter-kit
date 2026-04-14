@@ -274,6 +274,8 @@ One file. ~100-200 tokens. Claude is fully oriented before your first prompt.
 
 The `mdd` package is a companion terminal dashboard for MDD workspaces. Run it inside any project that has a `.mdd/` folder to get a real-time, interactive view of your workspace health — without leaving VS Code.
 
+![MDD Dashboard — terminal TUI showing feature docs, drift status, and doc content](docs/screenshots/mdd_dashboard.png)
+
 ```bash
 npm install -g mdd
 ```
