@@ -803,6 +803,8 @@ Quick overview of MDD state for the project:
 4. **Count known issues** — grep `known_issues` across all docs
 5. **Read current mdd_version** — from `mdd.md` frontmatter (or `~/.claude/commands/mdd.md` if not local)
 6. **Scan all `.mdd/` files** — grep `mdd_version` from each, group by version number
+7. **Scan `.mdd/initiatives/`** — count initiative files, group by status
+8. **Scan `.mdd/waves/`** — count wave files, group by status; for each active wave count complete vs total features
 
 Present:
 ```
@@ -814,6 +816,10 @@ Test coverage:    <N> unit tests, <N> E2E tests
 Known issues:     <N> tracked across <N> features
 Quality gates:    <N> files over 300 lines
 
+Initiatives:      <N> total (<N> active, <N> planned, <N> complete, <N> cancelled)
+  Active waves:   <wave-title> [<done>/<total> features complete]  (one line per active wave)
+  (shown only if .mdd/initiatives/ exists and has files; omit section entirely if directory is absent)
+
 MDD version:      v<N> (current)
   v<N>: <N> files — up to date
   v<N-1>: <N> files — run /install-mdd to update the command, then /mdd audit to refresh docs
@@ -824,7 +830,7 @@ Drift check:
   <N> features possibly drifted  ← run /mdd scan for details
   <N> features untracked         ← no last_synced field yet
 
-Run `/mdd audit` to refresh, `/mdd scan` to see drift details, or `/mdd <feature>` to build something new.
+Run `/mdd audit` to refresh, `/mdd scan` to see drift details, `/mdd plan-initiative` to start an initiative, or `/mdd <feature>` to build something new.
 ```
 
 If all files are on the current `mdd_version`, omit the version breakdown and just show: `MDD version: v<N> — all files up to date`
@@ -888,9 +894,9 @@ Triggered when arguments start with `note`. Three subcommands:
 
 ## SCAN MODE — `/mdd scan`
 
-Triggered when arguments start with `scan`. Detects features whose source files have changed since the last MDD session.
+Triggered when arguments start with `scan`. Detects features whose source files have changed since the last MDD session, and checks for initiative/wave drift.
 
-### Phase SC1 — Read all feature docs
+### Phase SC1 — Read all feature docs and initiative/wave files
 
 Read every `.mdd/docs/*.md` (excluding `archive/`). For each, extract:
 - `last_synced` from frontmatter
@@ -961,6 +967,20 @@ Recommended actions:
   /mdd update 04   — re-sync content-builder doc with code
   /mdd update 07   — fix broken file reference
   /mdd update 09   — add last_synced by running update mode
+```
+
+**Initiative/wave drift check** (only shown if `.mdd/initiatives/` exists):
+
+For each initiative in `.mdd/initiatives/`:
+- Read its `version` field from frontmatter
+- For each of its waves (in `.mdd/waves/`), check that the wave's `initiativeVersion` matches the initiative's current `version`
+- If a wave's `initiativeVersion` is older → flag as stale (run `/mdd plan-sync <initiative-id>` to refresh)
+
+```
+Initiatives:
+  ✅ auth-system (v2) — all waves in sync
+  ⚠️  payment-flow (v3) — 1 stale wave
+       payment-flow-wave-2 (initiativeVersion: 2, initiative now: 3) → run /mdd plan-sync payment-flow
 ```
 
 Save the full report to `.mdd/audits/scan-<date>.md`.
@@ -1195,13 +1215,15 @@ If yes, follow Phase 4 logic using the newly written doc.
 
 ## GRAPH MODE — `/mdd graph`
 
-Triggered when arguments start with `graph`. Shows the cross-feature dependency map.
+Triggered when arguments start with `graph`. Shows the cross-feature dependency map, plus initiative/wave structure if present.
 
 ### Phase G1 — Build dependency graph
 
 Read all `.mdd/docs/*.md` (including `archive/`). For each doc, extract `id`, `title`, `status`, and `depends_on`.
 
 Build a directed graph: edge A → B means "A depends on B" (B must exist for A to work).
+
+**Initiative/wave graph** (only shown if `.mdd/initiatives/` exists): Also read all initiative and wave files. Build a second graph showing the initiative → wave → feature doc hierarchy.
 
 ### Phase G2 — Detect issues
 
@@ -1210,6 +1232,11 @@ Build a directed graph: edge A → B means "A depends on B" (B must exist for A 
 **Risky dependency:** A `status: complete` feature depends on a `status: in_progress` or `status: draft` feature.
 
 **Orphan:** A feature with no `depends_on` and no other feature depending on it.
+
+**Wave/initiative issues:**
+- A wave's `docPath` points to a feature doc that does not exist → broken link
+- A wave references a `dependsOn` wave that is not in the same initiative → invalid (cross-initiative deps not supported)
+- A feature doc whose slug appears in a wave but has no `docPath` set and status is `complete` → doc missing for completed feature
 
 ### Phase G3 — Render
 
@@ -1230,6 +1257,21 @@ Orphans (no dependencies, no dependents):
 Issues:
   ⚠️  09-integrations depends on 06-command-system (status: in_progress) — risky
   ❌  05-testing-framework depends on 10-mdd-refinements (deprecated) — broken
+```
+
+**Initiative/wave section** (appended when initiatives exist):
+
+```
+📋 Initiative / Wave Hierarchy
+
+  auth-system (active, v2)
+    ├─ wave-1: Auth Foundation [complete] ✓ 3/3 features
+    └─ wave-2: Auth Hardening [active]    ● 1/2 features
+         ├─ auth-2fa       → docs/18-auth-2fa.md        ✅
+         └─ auth-rate-limit → (no doc yet)              ❓
+
+Issues:
+  ❓  auth-system / wave-2 / auth-rate-limit — complete in wave but no doc path set
 ```
 
 Save the graph to `.mdd/audits/graph-<date>.md`.
