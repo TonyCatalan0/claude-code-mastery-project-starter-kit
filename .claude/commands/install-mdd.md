@@ -1,5 +1,5 @@
 ---
-description: Install MDD workflow into any existing project — copies the /mdd command and scaffolds the .mdd/ directory structure
+description: "Install MDD workflow into any existing project — copies the /mdd command and scaffolds the .mdd/ directory structure"
 scope: starter-kit
 argument-hint: "[/path/to/project]"
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
