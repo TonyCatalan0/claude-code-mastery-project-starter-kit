@@ -185,6 +185,8 @@ Every phase reads the output of the previous phase, compressing context further 
 
 **Upgrade mode** (`/mdd upgrade`) batch-patches missing frontmatter fields (`last_synced`, `status`, `phase`) across all `.mdd/docs/` files. Non-destructive — existing fields are never touched. `last_synced` is inferred from `git log` on each doc file (not today's date), so drift calculations remain accurate. Shows a plan first and asks for confirmation before writing. Run once when upgrading from an older MDD version; if the MDD Dashboard shows all docs as UNTRACKED (❓), this is the fix.
 
+**MDD versioning** — every file created or updated by MDD is stamped with `mdd_version: N` in its frontmatter, where N matches the version declared in `mdd.md`. `/mdd status` shows a breakdown of which files are on which version so you can see at a glance what's out of sync. When you update MDD via `/install-mdd` or `/install-global mdd`, both commands compare `mdd_version` between the source and installed file and prompt before overwriting — no silent overwrites. Files without `mdd_version` (created before versioning was introduced) are treated as version 0 and flagged as outdated.
+
 ### The `.mdd/` Directory
 
 All MDD artifacts live in a single dotfile directory, gitignored by default:

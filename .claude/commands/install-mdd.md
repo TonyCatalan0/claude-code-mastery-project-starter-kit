@@ -44,8 +44,30 @@ git -C "$TARGET" rev-parse --git-dir 2>/dev/null && echo "GIT_REPO" || echo "NOT
 [ -f "$TARGET/.claude/commands/mdd.md" ] && echo "CMD_EXISTS" || echo "CMD_CLEAN"
 ```
 
-If MDD is already installed (`.mdd/` exists AND `mdd.md` is present), ask:
-> "MDD is already installed in this project. Re-run to reset `.mdd/.startup.md` and ensure directories exist? (yes / no)"
+If MDD is already installed (`.mdd/` exists AND `mdd.md` is present):
+
+Read `mdd_version` from both files:
+```bash
+SOURCE_VERSION=$(grep "^mdd_version:" "$SOURCE_MDD" | awk '{print $2}')
+SOURCE_VERSION=${SOURCE_VERSION:-0}
+INSTALLED_VERSION=$(grep "^mdd_version:" "$TARGET/.claude/commands/mdd.md" | awk '{print $2}')
+INSTALLED_VERSION=${INSTALLED_VERSION:-0}
+```
+
+If versions differ, surface the mismatch:
+```
+MDD is already installed in this project.
+  Installed: v<INSTALLED_VERSION>
+  Available: v<SOURCE_VERSION>  ← update available
+```
+
+Ask: "Update mdd.md to v<SOURCE_VERSION> and reset .mdd/.startup.md? (yes / no)"
+
+If versions are equal:
+```
+MDD is already installed in this project (v<VERSION> — up to date).
+```
+Ask: "Re-run to reset .mdd/.startup.md and ensure directories exist? (yes / no)"
 
 If no: exit with `"Nothing changed."`
 If yes: continue (existing docs and audits are preserved — only missing pieces are created).
@@ -120,8 +142,8 @@ mkdir -p "$TARGET/.claude/commands"
 
 Copy `mdd.md` from the source found in Step 3 to `$TARGET/.claude/commands/mdd.md`.
 
-If the file already exists at the target, ask:
-> "mdd.md already exists in this project. Overwrite with the latest version? (yes / keep existing)"
+If the file already exists at the target, read both versions and ask:
+> "mdd.md already exists in this project (installed: v<INSTALLED_VERSION>, available: v<SOURCE_VERSION>). Update? (yes / keep existing)"
 
 If "keep existing": skip the copy.
 If "yes": overwrite.

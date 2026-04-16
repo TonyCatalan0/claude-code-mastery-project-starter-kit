@@ -3,6 +3,7 @@ description: "MDD workflow — Document → Audit → Fix → Verify. Build feat
 scope: project
 argument-hint: "<feature-description> or audit [section]"
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, AskUserQuestion, Agent
+mdd_version: 1
 ---
 
 # MDD — Manual-First Development Workflow
@@ -233,6 +234,7 @@ data_flow: <path to .mdd/audits/flow-*.md, or "greenfield" if skipped>
 last_synced: <YYYY-MM-DD>
 status: draft
 phase: <last completed phase name, or "all" when fully built>
+mdd_version: <read from mdd.md frontmatter mdd_version field>
 known_issues: []
 ---
 
@@ -652,7 +654,7 @@ Tests: <N>/<N> passing
 Integration: verified (<feature type> — real environment)
 Typecheck: clean
 
-Update doc: status → complete, phase → all, last_synced → <today>
+Update doc: status → complete, phase → all, last_synced → <today>, mdd_version → <current from mdd.md frontmatter>
 
 New patterns established: <any new rules worth adding to CLAUDE.md>
 
@@ -671,7 +673,7 @@ Next step:   <concrete action to unblock — e.g. "Add STRIPE_API_KEY to .env, t
 
 Code is complete. All <N> tests pass. Typecheck clean.
 Feature is NOT marked done until Phase 7b passes.
-Update doc: status → in_progress, phase → integration-pending
+Update doc: status → in_progress, phase → integration-pending, mdd_version → <current from mdd.md frontmatter>
 
 When unblocked: resume at Phase 7b only. No re-implementation needed.
 ```
@@ -733,13 +735,13 @@ One block per assigned feature:
 
 #### Main conversation: write notes file
 
-After ALL agents return, write their output to `.mdd/audits/notes-<date>.md` in one pass — the main conversation is the single writer. Do not write partial notes; wait for all agents first.
+After ALL agents return, write their output to `.mdd/audits/notes-<date>.md` in one pass — the main conversation is the single writer. Do not write partial notes; wait for all agents first. Include `mdd_version: <current from mdd.md frontmatter>` as the first line of frontmatter in the notes file.
 
 **Fallback:** If any agent fails, process that batch sequentially in the main conversation using the same note format. Never surface agent failures to the user unless all batches fail.
 
 ### Phase A3 — Analyze
 
-Read ONLY the notes file (NOT source code again). Produce findings report at `.mdd/audits/report-<date>.md`:
+Read ONLY the notes file (NOT source code again). Produce findings report at `.mdd/audits/report-<date>.md` — include `mdd_version: <current from mdd.md frontmatter>` as the first line of frontmatter:
 
 1. Executive summary
 2. Feature completeness matrix
@@ -778,7 +780,7 @@ Read the findings report. For each finding to fix:
 3. Write or update tests
 4. Run tests after each fix group
 
-Report progress per finding. Update documentation `known_issues` to remove fixed items.
+Report progress per finding. Update documentation `known_issues` to remove fixed items. Update `mdd_version` to current on every `.mdd/docs/*.md` file that is edited during fixes.
 
 **After fixes are complete and results are written to `.mdd/audits/results-*.md`**, trigger the `.mdd/.startup.md` rebuild (same logic as in Status Mode — rebuild auto-generated zone, preserve Notes zone) so the Last Audit block reflects the new numbers.
 
@@ -792,6 +794,8 @@ Quick overview of MDD state for the project:
 2. **Scan `.mdd/audits/`** — find latest audit report
 3. **Count tests** — `pnpm test:unit --reporter=json 2>/dev/null | jq '.numTotalTests'`
 4. **Count known issues** — grep `known_issues` across all docs
+5. **Read current mdd_version** — from `mdd.md` frontmatter (or `~/.claude/commands/mdd.md` if not local)
+6. **Scan all `.mdd/` files** — grep `mdd_version` from each, group by version number
 
 Present:
 ```
@@ -803,6 +807,11 @@ Test coverage:    <N> unit tests, <N> E2E tests
 Known issues:     <N> tracked across <N> features
 Quality gates:    <N> files over 300 lines
 
+MDD version:      v<N> (current)
+  v<N>: <N> files — up to date
+  v<N-1>: <N> files — run /install-mdd to update the command, then /mdd audit to refresh docs
+  v0 (unversioned): <N> files — created before versioning was introduced
+
 Drift check:
   <N> features in sync
   <N> features possibly drifted  ← run /mdd scan for details
@@ -810,6 +819,8 @@ Drift check:
 
 Run `/mdd audit` to refresh, `/mdd scan` to see drift details, or `/mdd <feature>` to build something new.
 ```
+
+If all files are on the current `mdd_version`, omit the version breakdown and just show: `MDD version: v<N> — all files up to date`
 
 **Drift check logic** (lightweight — no full git log, just a quick presence check):
 1. For each `.mdd/docs/*.md`, read `last_synced` from frontmatter.
@@ -829,8 +840,8 @@ After collecting status, rebuild the auto-generated zone of `.mdd/.startup.md`:
    - `Features Documented:` sorted list of `.mdd/docs/*.md` filenames with status if detectable from frontmatter
    - `Last Audit:` from the most recent `.mdd/audits/report-*.md` — extract findings/fixed/open counts
    - `Rules Summary:` static block (does not change)
-3. Write the rebuilt auto-generated section + `---` divider + preserved Notes section back to `.mdd/.startup.md`
-4. If no `.mdd/.startup.md` exists yet, create it fresh using the template with an empty Notes section
+3. Write the rebuilt auto-generated section + `---` divider + preserved Notes section back to `.mdd/.startup.md`. Update `mdd_version` in the file's frontmatter to current.
+4. If no `.mdd/.startup.md` exists yet, create it fresh using the template with an empty Notes section, stamped with current `mdd_version`.
 
 ---
 

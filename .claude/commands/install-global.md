@@ -34,15 +34,28 @@ mkdir -p ~/.claude/commands
 ```
 
 For each file (`mdd.md`, `install-mdd.md`):
-- If the file **already exists** → **overwrite** it with the version from `.claude/commands/` (this is an explicit update, no prompt needed)
+
+Read `mdd_version` from source and installed (treat missing as 0):
+```bash
+SOURCE_VERSION=$(grep "^mdd_version:" .claude/commands/mdd.md | awk '{print $2}')
+SOURCE_VERSION=${SOURCE_VERSION:-0}
+INSTALLED_VERSION=$(grep "^mdd_version:" ~/.claude/commands/mdd.md 2>/dev/null | awk '{print $2}')
+INSTALLED_VERSION=${INSTALLED_VERSION:-0}
+```
+
+- If the file **already exists** and versions differ → overwrite (explicit update, no prompt needed)
+- If the file **already exists** and versions match → skip, report "already up to date"
 - If the file **does NOT exist** → copy it
 
 Report:
 ```
 Global MDD Update
 ==================
-  ✓ mdd.md — updated to latest version
-  ✓ install-mdd.md — updated to latest version
+  ✓ mdd.md — v<INSTALLED> → v<SOURCE> (updated)
+  ✓ install-mdd.md — updated
+  — OR —
+  ✓ mdd.md — v<VERSION> already up to date
+  ✓ install-mdd.md — updated
 
 /mdd is now current in every project on this machine.
 ```
@@ -165,7 +178,8 @@ mkdir -p ~/.claude/commands
 ```
 
 For each file (`mdd.md`, `install-mdd.md`):
-- If the file **already exists** at `~/.claude/commands/` → ask: "mdd.md already exists globally. Overwrite with the latest version? (yes / keep existing)"
+- Read `mdd_version` from source and installed (treat missing as 0)
+- If the file **already exists** at `~/.claude/commands/` → ask: "mdd.md already exists globally (installed: v<INSTALLED_VERSION>, available: v<SOURCE_VERSION>). Overwrite? (yes / keep existing)"
 - If it **does NOT exist** → copy it from `.claude/commands/`
 
 Report:
