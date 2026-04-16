@@ -47,12 +47,12 @@ INSTALLED_VERSION=${INSTALLED_VERSION:-0}
 - If the file **already exists** and versions match → skip, report "already up to date"
 - If the file **does NOT exist** → copy it
 
-**After copying**, update the `description` field in each installed file to append `(global)` so it is distinguishable from project-level copies in the Claude command list:
+**After copying**, update the `description` field in each installed file to prepend `(global)` so it is distinguishable from project-level copies in the Claude command list:
 
 ```bash
-# Append (global) to description in the installed copy
-sed -i 's/^description: "\(.*\)"$/description: "\1 (global)"/' ~/.claude/commands/mdd.md
-sed -i 's/^description: "\(.*\)"$/description: "\1 (global)"/' ~/.claude/commands/install-mdd.md
+# Prepend (global) to description in the installed copy
+sed -i 's/^description: "\(.*\)"$/description: "(global) \1"/' ~/.claude/commands/mdd.md
+sed -i 's/^description: "\(.*\)"$/description: "(global) \1"/' ~/.claude/commands/install-mdd.md
 ```
 
 This only modifies the installed copy at `~/.claude/commands/` — the source files in `.claude/commands/` are never touched.
@@ -192,10 +192,10 @@ For each file (`mdd.md`, `install-mdd.md`):
 - If the file **already exists** at `~/.claude/commands/` → ask: "mdd.md already exists globally (installed: v<INSTALLED_VERSION>, available: v<SOURCE_VERSION>). Overwrite? (yes / keep existing)"
 - If it **does NOT exist** → copy it from `.claude/commands/`
 
-**After copying**, append `(global)` to the `description` field in each installed file:
+**After copying**, prepend `(global)` to the `description` field in each installed file:
 ```bash
-sed -i 's/^description: "\(.*\)"$/description: "\1 (global)"/' ~/.claude/commands/mdd.md
-sed -i 's/^description: "\(.*\)"$/description: "\1 (global)"/' ~/.claude/commands/install-mdd.md
+sed -i 's/^description: "\(.*\)"$/description: "(global) \1"/' ~/.claude/commands/mdd.md
+sed -i 's/^description: "\(.*\)"$/description: "(global) \1"/' ~/.claude/commands/install-mdd.md
 ```
 
 Report:
