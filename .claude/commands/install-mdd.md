@@ -3,6 +3,7 @@ description: "Install MDD workflow into any existing project — copies the /mdd
 scope: starter-kit
 argument-hint: "[/path/to/project]"
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
+mdd_version: 1
 ---
 
 # Install MDD
