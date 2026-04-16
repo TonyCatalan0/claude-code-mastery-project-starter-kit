@@ -169,21 +169,65 @@ Every phase reads the output of the previous phase, compressing context further 
 /mdd note clear         # wipe notes section
 ```
 
-**Build mode** (`/mdd <description>`) follows 7 phases with 3 mandatory gates: Understand → Analyze → Document → Test Skeletons + **Red Gate** → Plan → Implement + **Green Gate** → Verify + **Integration Gate**. Phase 1 gathers context using 3 parallel Explore agents (rules, existing features, codebase structure). Phase 2 is a mandatory **Data Flow & Impact Analysis** gate — before writing a single line of docs, Claude reads the existing code the feature will touch, traces every data value end-to-end (backend computation → API transport → frontend consumption → UI transformation), checks for parallel computations of the same concept, and presents findings before proceeding. Skipped automatically on greenfield projects. Questions are context-adaptive — tooling tasks skip the database and API questions automatically. After generating test skeletons, the **Red Gate** runs the new tests to confirm every skeleton actually fails — if any passes vacuously, the skeleton is fixed before implementation begins. Claude presents a build plan as **commit-worthy blocks** (not flat steps) each with a runnable end-state, verification command, and handoff contract; independent blocks are annotated for parallel execution. The **Green Gate** implements each block with a 5-iteration diagnosis-first loop — each iteration requires stating the root cause before applying a fix; the loop stops at 5 and reports remaining failures to the user rather than continuing blindly. The **Integration Gate** verifies actual behavior in the real runtime environment (real HTTP calls, real DB queries, real browser rendering) before reporting completion — if an external condition blocks verification, the feature is marked `⏸️ MDD Blocked` (not done) with a concrete next step, and the default stance on any anomaly is "my code is wrong until proven otherwise".
+**Build mode** (`/mdd <description>`) — 7 phases, 3 mandatory gates:
 
-**Audit mode** (`/mdd audit`) runs a complete security and quality audit across 5 phases: (A1) Scope — reads all `.mdd/docs/` files to build the feature map, auto-generates docs if none exist; (A2) Read + Notes — parallelized: features are batched across up to 3 parallel Explore agents, each reading its assigned source files and returning structured notes back to the main conversation (single writer); single-feature audits stay sequential; findings survive context compaction because they're written to disk; (A3) Analyze — reads only the notes file to produce a severity-rated findings report; (A4) Present — shows top findings with effort estimates and asks what to fix; (A5) Fix — applies fixes, writes tests, and updates documentation. Auto-branches to `fix/mdd-audit-<date>` before making any changes.
+- **Pipeline:** Understand → Analyze → Document → Test Skeletons + **Red Gate** → Plan → Implement + **Green Gate** → Verify + **Integration Gate**
+- **Phase 1** gathers context using 3 parallel Explore agents (rules, existing features, codebase structure)
+- **Phase 2** is a mandatory **Data Flow & Impact Analysis** gate — traces every data value end-to-end before writing a line of docs; skipped automatically on greenfield projects
+- Questions are context-adaptive — tooling tasks skip the database and API questions entirely
+- **Red Gate** runs every test skeleton to confirm it actually fails before implementation begins
+- Build plan uses **commit-worthy blocks** with runnable end-states, verification commands, and handoff contracts; independent blocks are annotated for parallel execution
+- **Green Gate** implements each block with a 5-iteration diagnosis-first loop — states root cause before each fix; stops at 5 and reports to the user rather than continuing blindly
+- **Integration Gate** verifies real behavior (real HTTP calls, real DB, real browser) before marking complete; blocked features get `⏸️ MDD Blocked` with a concrete next step
 
-**Scan mode** (`/mdd scan`) detects documentation drift — features whose source files have changed since the last MDD session. Parallelized: a single Explore agent runs all `git log --after="<last_synced>"` drift checks in one pass and returns a classification table (in sync / drifted / broken reference / untracked), eliminating the sequential bottleneck on large feature sets. Shows ✅ in sync / ⚠️ drifted / ❌ broken reference / ❓ untracked. Saves a full drift report to `.mdd/audits/scan-<date>.md`.
+**Audit mode** (`/mdd audit`) — complete security and quality audit, 5 phases:
 
-**Update mode** (`/mdd update <feature-id>`) re-syncs an existing feature doc after code has changed. Reads the current source files, diffs them against the doc, presents "what changed", and rewrites only the affected sections. Appends new test skeletons for newly documented behaviors without touching existing tests. Updates `last_synced` in frontmatter.
+- **A1 Scope** — reads `.mdd/docs/` to build the feature map; auto-generates docs if none exist
+- **A2 Read + Notes** — features batched across up to 3 parallel Explore agents; notes written to disk so findings survive context compaction
+- **A3 Analyze** — reads notes file only to produce a severity-rated findings report
+- **A4 Present** — shows top findings with effort estimates and asks what to fix
+- **A5 Fix** — applies fixes, writes tests, updates documentation
+- Auto-branches to `fix/mdd-audit-<date>` before making any changes
 
-**Reverse-engineer mode** (`/mdd reverse-engineer [path|feature-id]`) generates MDD documentation from code. Works on undocumented files (new doc) or existing docs (regenerate + compare). Parallelized for multi-file scope: ≤3 files read directly in main conversation, 4+ files batched across up to 3 parallel Explore agents that each return structured inference output (purpose, data models, API routes, business rules, edge cases); main conversation synthesizes into the doc draft. Always shows a diff in regenerate mode so you can merge rather than blindly overwrite. Discloses limitations — business intent and implicit constraints must be manually reviewed.
+**Scan mode** (`/mdd scan`) — detects documentation drift (features whose source files changed since last session):
 
-**Graph mode** (`/mdd graph`) renders an ASCII dependency map from `depends_on` fields. Flags broken dependencies (deprecated features still depended on), risky dependencies (complete features depending on in-progress ones), and orphans (no connections either way).
+- A single Explore agent runs all `git log --after="<last_synced>"` checks in one pass
+- Returns a classification table: ✅ in sync / ⚠️ drifted / ❌ broken reference / ❓ untracked
+- Saves a full drift report to `.mdd/audits/scan-<date>.md`
 
-**Deprecate mode** (`/mdd deprecate <feature-id>`) retires a feature: sets `status: deprecated`, moves the doc to `.mdd/docs/archive/`, adds known-issue warnings to all dependents, and optionally deletes source and test files (asks separately for each).
+**Update mode** (`/mdd update <feature-id>`) — re-syncs a feature doc after code changes:
 
-**Upgrade mode** (`/mdd upgrade`) batch-patches missing frontmatter fields (`last_synced`, `status`, `phase`) across all `.mdd/docs/` files. Non-destructive — existing fields are never touched. `last_synced` is inferred from `git log` on each doc file (not today's date), so drift calculations remain accurate. Shows a plan first and asks for confirmation before writing. Run once when upgrading from an older MDD version; if the MDD Dashboard shows all docs as UNTRACKED (❓), this is the fix.
+- Reads current source files, diffs them against the doc, presents "what changed"
+- Rewrites only the affected sections; never touches unchanged content
+- Appends new test skeletons for newly documented behaviors without modifying existing tests
+- Updates `last_synced` in frontmatter
+
+**Reverse-engineer mode** (`/mdd reverse-engineer [path|feature-id]`) — generates MDD docs from existing code:
+
+- Works on undocumented files (new doc) or existing docs (regenerate + compare)
+- ≤3 files read directly in the main conversation; 4+ files batched across up to 3 parallel Explore agents
+- Always shows a diff in regenerate mode so you can merge rather than blindly overwrite
+- Discloses limitations — business intent and implicit constraints must be manually reviewed
+
+**Graph mode** (`/mdd graph`) — renders an ASCII dependency map from `depends_on` fields:
+
+- Flags broken dependencies (deprecated features still depended on)
+- Flags risky dependencies (complete features depending on in-progress ones)
+- Identifies orphans (no connections either way)
+
+**Deprecate mode** (`/mdd deprecate <feature-id>`) — retires a feature cleanly:
+
+- Sets `status: deprecated` and moves the doc to `.mdd/docs/archive/`
+- Adds known-issue warnings to all dependent docs
+- Asks separately whether to delete source files and test files — never auto-deletes
+
+**Upgrade mode** (`/mdd upgrade`) — batch-patches missing frontmatter fields across all docs:
+
+- Adds `last_synced`, `status`, and `phase` to any doc missing them
+- Non-destructive — existing fields are never overwritten
+- `last_synced` inferred from `git log` on each doc file (not today's date) so drift stays accurate
+- Shows a plan and asks for confirmation before writing anything
+- Run once when upgrading from an older MDD version; fixes the UNTRACKED (❓) state
 
 **MDD versioning** — every file created or updated by MDD is stamped with `mdd_version: N` in its frontmatter, where N matches the version declared in `mdd.md`. `/mdd status` shows a breakdown of which files are on which version so you can see at a glance what's out of sync. When you update MDD via `/install-mdd` or `/install-global mdd`, both commands compare `mdd_version` between the source and installed file and prompt before overwriting — no silent overwrites. Files without `mdd_version` (created before versioning was introduced) are treated as version 0 and flagged as outdated.
 
