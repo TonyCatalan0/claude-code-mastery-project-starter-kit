@@ -370,7 +370,7 @@
         </div>
 
         <h3>Usage</h3>
-        <p>One command, eight modes:</p>
+        <p>One command, fourteen modes:</p>
 
         <pre><code class="language-bash"># Build a new feature (Analyze → Document → Test skeletons → Plan → Implement → Verify)
 /mdd user authentication with JWT tokens
@@ -399,7 +399,28 @@
 /mdd deprecate 03
 
 # Fix all UNTRACKED docs in one pass (missing last_synced/status/phase)
-/mdd upgrade</code></pre>
+/mdd upgrade
+
+# ── Initiative / Wave Planning (NEW) ──────────────────────────────────────────
+
+# Create an initiative (groups related waves into one roadmap item)
+/mdd plan-initiative "auth system"             # guided mode
+/mdd plan-initiative "auth system" --template  # write raw markdown yourself
+
+# Add a wave (a phase of work with a concrete demo state)
+/mdd plan-wave auth-system "Auth Foundation"
+
+# Execute a wave — turns planned features into MDD docs
+/mdd plan-execute auth-system-wave-1
+
+# Re-stamp waves after editing the parent initiative
+/mdd plan-sync auth-system
+
+# Remove a feature from a wave (before it has a doc)
+/mdd plan-remove-feature auth-system-wave-1 auth-signup
+
+# Cancel an initiative and all planned work
+/mdd plan-cancel-initiative auth-system</code></pre>
 
         <h3>Build Mode &mdash; New Features</h3>
         <p>When you run <code>/mdd &lt;feature description&gt;</code>, Claude follows a structured 7-phase process:</p>
@@ -425,16 +446,28 @@
           <li><strong>Fix</strong> &mdash; Applies fixes from the report, writes tests, updates documentation</li>
         </ol>
 
-        <h3>New Modes &mdash; Drift Detection &amp; Doc Lifecycle</h3>
+        <h3>More Modes &mdash; Drift Detection, Doc Lifecycle &amp; Planning</h3>
         <ul style="line-height: 1.8;">
-          <li><strong><code>/mdd scan</code></strong> &mdash; Detects documentation drift. Parallelized: a single Explore agent runs all <code>git log --after="&lt;last_synced&gt;"</code> checks in one pass and returns a classification table, eliminating the sequential bottleneck on large feature sets. Reports ✅ in sync / ⚠️ drifted / ❌ broken / ❓ untracked. The fix for drift is <code>/mdd update</code>.</li>
+          <li><strong><code>/mdd scan</code></strong> &mdash; Detects documentation drift. Parallelized: a single Explore agent runs all <code>git log --after="&lt;last_synced&gt;"</code> checks in one pass and returns a classification table, eliminating the sequential bottleneck on large feature sets. Reports ✅ in sync / ⚠️ drifted / ❌ broken / ❓ untracked. Also checks for stale waves (wave <code>initiativeVersion</code> out of sync with parent initiative). The fix for drift is <code>/mdd update</code>.</li>
           <li><strong><code>/mdd update &lt;feature-id&gt;</code></strong> &mdash; Re-syncs an existing feature doc after code has changed. Diffs code vs doc, presents what changed, rewrites only the affected sections, appends new test skeletons for new behaviors, and updates <code>last_synced</code> in frontmatter.</li>
           <li><strong><code>/mdd reverse-engineer [path|id]</code></strong> &mdash; Generates MDD docs from existing code. Works on undocumented files (new doc) or existing docs (regenerate + compare). Parallelized for multi-file scope: ≤3 files read in main conversation; 4+ files batched across up to 3 Explore agents returning structured inference output (purpose, models, routes, rules, edge cases), synthesized into the doc draft. In regenerate mode, shows old vs new side-by-side so you can merge rather than overwrite.</li>
-          <li><strong><code>/mdd graph</code></strong> &mdash; Renders an ASCII dependency map from <code>depends_on</code> fields. Flags broken dependencies (deprecated features still referenced), risky dependencies (complete features depending on draft/in-progress ones), and orphans.</li>
+          <li><strong><code>/mdd graph</code></strong> &mdash; Renders an ASCII dependency map from <code>depends_on</code> fields. Flags broken dependencies (deprecated features still referenced), risky dependencies (complete features depending on draft/in-progress ones), and orphans. When <code>.mdd/initiatives/</code> exists, also renders an initiative &rarr; wave &rarr; feature hierarchy tree with progress indicators and broken doc-path warnings.</li>
           <li><strong><code>/mdd deprecate &lt;feature-id&gt;</code></strong> &mdash; Retires a feature: sets <code>status: deprecated</code>, moves doc to <code>.mdd/docs/archive/</code>, adds known-issue warnings to all dependents, and optionally deletes source and test files (asks separately for each).</li>
           <li><strong><code>/mdd upgrade</code></strong> &mdash; Batch-patches missing <code>last_synced</code>, <code>status</code>, and <code>phase</code> frontmatter fields across all <code>.mdd/docs/</code> files. Non-destructive &mdash; existing fields are never overwritten. <code>last_synced</code> is inferred from <code>git log</code> on each doc file (preserving actual history, not defaulting to today). Shows a full plan before writing. <strong>Run this once if the MDD Dashboard shows all docs as UNTRACKED (&#10067;)</strong> &mdash; it converts them all to IN SYNC in a single pass.</li>
           <li><strong>MDD versioning</strong> &mdash; Every file created or updated by MDD is stamped with <code>mdd_version: N</code> in its frontmatter, matching the version declared in <code>mdd.md</code>. <code>/mdd status</code> shows a breakdown of files by version so you can see at a glance what&rsquo;s out of sync. <code>/install-mdd</code> and <code>/install-global mdd</code> compare <code>mdd_version</code> between source and installed file before overwriting &mdash; no silent updates. Files without <code>mdd_version</code> (created before versioning) are treated as version 0 and flagged as outdated.</li>
         </ul>
+
+        <h3>Initiative &amp; Wave Planning <span style="background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; font-size: 0.6em; padding: 0.15em 0.5em; border-radius: 999px; vertical-align: middle; margin-left: 0.4em;">NEW</span></h3>
+        <p>MDD Waves adds a three-level planning hierarchy on top of feature docs: <strong>Initiatives &rarr; Waves &rarr; Feature docs</strong>. An initiative is a roadmap item (e.g., &ldquo;Auth System&rdquo;); a wave is a phase of that initiative with a concrete demo state; feature docs are the individual MDD docs built by <code>/mdd plan-execute</code>.</p>
+        <ul style="line-height: 1.8;">
+          <li><strong><code>/mdd plan-initiative &lt;title&gt;</code></strong> &mdash; Creates a new initiative in <code>.mdd/initiatives/</code>. Guided mode interviews you about goals, target audience, and open product questions. <code>--template</code> flag skips the interview and writes the raw markdown file for you to fill in. Collision-checks slugs against existing initiatives and blocks if active wave docs exist for that slug.</li>
+          <li><strong><code>/mdd plan-wave &lt;initiative-id&gt; &lt;wave-title&gt;</code></strong> &mdash; Adds a wave to an existing initiative. Captures the demo state (what a user can do when this wave ships), the feature list with inter-feature dependencies, and open research questions. Writes to <code>.mdd/waves/</code> stamped with the initiative&rsquo;s current version.</li>
+          <li><strong><code>/mdd plan-execute &lt;wave-id&gt;</code></strong> &mdash; Runs <code>/mdd &lt;feature&gt;</code> build mode for each planned feature in the wave that doesn&rsquo;t have a doc yet. Supports automated (run all) or interactive (confirm each) modes. Updates <code>docPath</code> and <code>waveStatus</code> in the wave file as docs are created.</li>
+          <li><strong><code>/mdd plan-sync &lt;initiative-id&gt;</code></strong> &mdash; Re-stamps all child wave files with the initiative&rsquo;s current version after the initiative is edited. Run this to clear stale-wave warnings from <code>/mdd scan</code>.</li>
+          <li><strong><code>/mdd plan-remove-feature &lt;wave-id&gt; &lt;feature-slug&gt;</code></strong> &mdash; Removes a feature from a wave before it has been executed. Hard-stops if the feature already has a <code>docPath</code> &mdash; use <code>/mdd deprecate</code> for that.</li>
+          <li><strong><code>/mdd plan-cancel-initiative &lt;initiative-id&gt;</code></strong> &mdash; Sets the initiative and all child waves to <code>cancelled</code>. Warns if any wave has executed features and asks how to handle them. Cancelled initiatives remain visible in the TUI dashboard (shown in gray) for historical reference.</li>
+        </ul>
+        <p>The MDD Dashboard TUI gains a collapsible <strong>INITIATIVES</strong> section at the top of the left panel. Press <kbd>Enter</kbd> or <kbd>&rarr;</kbd> on an initiative to expand its waves; press <kbd>i</kbd> to jump directly to the first initiative. The status bar shows total initiative count and active wave progress.</p>
 
         <h3>The <code>.mdd/</code> Directory</h3>
         <p>All MDD artifacts live in a single dotfile directory, gitignored by default:</p>
@@ -443,6 +476,10 @@
 │   ├── 01-project-scaffolding.md  # YAML frontmatter: last_synced, status, phase
 │   ├── 02-profile-system.md
 │   └── archive/                 # Deprecated feature docs (/mdd deprecate)
+├── initiatives/                 # Initiative files (/mdd plan-initiative)
+│   └── auth-system.md           # id, title, status, version, hash, overview
+├── waves/                       # Wave files (/mdd plan-wave)
+│   └── auth-system-wave-1.md    # features table + docPath, waveStatus per feature
 └── audits/                      # Audit artifacts
     ├── notes-2026-03-01.md      # Raw reading notes
     ├── report-2026-03-01.md     # Structured findings
