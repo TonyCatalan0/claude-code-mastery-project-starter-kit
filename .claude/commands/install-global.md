@@ -47,15 +47,25 @@ INSTALLED_VERSION=${INSTALLED_VERSION:-0}
 - If the file **already exists** and versions match → skip, report "already up to date"
 - If the file **does NOT exist** → copy it
 
+**After copying**, update the `description` field in each installed file to append `(global)` so it is distinguishable from project-level copies in the Claude command list:
+
+```bash
+# Append (global) to description in the installed copy
+sed -i 's/^description: "\(.*\)"$/description: "\1 (global)"/' ~/.claude/commands/mdd.md
+sed -i 's/^description: "\(.*\)"$/description: "\1 (global)"/' ~/.claude/commands/install-mdd.md
+```
+
+This only modifies the installed copy at `~/.claude/commands/` — the source files in `.claude/commands/` are never touched.
+
 Report:
 ```
 Global MDD Update
 ==================
-  ✓ mdd.md — v<INSTALLED> → v<SOURCE> (updated)
-  ✓ install-mdd.md — updated
+  ✓ mdd.md — v<INSTALLED> → v<SOURCE> (updated) [labelled "global"]
+  ✓ install-mdd.md — updated [labelled "global"]
   — OR —
   ✓ mdd.md — v<VERSION> already up to date
-  ✓ install-mdd.md — updated
+  ✓ install-mdd.md — updated [labelled "global"]
 
 /mdd is now current in every project on this machine.
 ```
@@ -181,6 +191,12 @@ For each file (`mdd.md`, `install-mdd.md`):
 - Read `mdd_version` from source and installed (treat missing as 0)
 - If the file **already exists** at `~/.claude/commands/` → ask: "mdd.md already exists globally (installed: v<INSTALLED_VERSION>, available: v<SOURCE_VERSION>). Overwrite? (yes / keep existing)"
 - If it **does NOT exist** → copy it from `.claude/commands/`
+
+**After copying**, append `(global)` to the `description` field in each installed file:
+```bash
+sed -i 's/^description: "\(.*\)"$/description: "\1 (global)"/' ~/.claude/commands/mdd.md
+sed -i 's/^description: "\(.*\)"$/description: "\1 (global)"/' ~/.claude/commands/install-mdd.md
+```
 
 Report:
 ```
