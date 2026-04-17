@@ -88,8 +88,8 @@ if [ -f "${CONF_SEARCH_DIR}/${CONF}" ]; then
     if [ -n "$SETTING" ]; then
         AUTO_BRANCH="$SETTING"
     fi
-elif [ -f "$CONF" ]; then
-    # Fallback: conf exists in CWD (classic case where no cd was used)
+elif [ -z "$TARGET_DIR" ] && [ -f "$CONF" ]; then
+    # Fallback: conf exists in CWD — only when no cross-repo target was detected
     CONF_FOUND=true
     SETTING=$(grep -E '^\s*auto_branch\s*=' "$CONF" 2>/dev/null | head -1 | sed 's/.*=\s*//' | sed 's/\s*#.*//' | tr -d ' ')
     if [ -n "$SETTING" ]; then
