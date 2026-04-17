@@ -401,11 +401,28 @@ mdd status       # same — all three open the dashboard
 
 | Panel | Contents |
 |-------|----------|
-| Left | All feature docs, audit reports, dependency graph (↑↓ to navigate) |
-| Right | Full doc or audit content with drift info, frontmatter chips, markdown (→ to focus, ↑↓ to scroll) |
-| Top bar | Counts: docs, in-sync, drifted, broken, untracked, open issues, audits |
+| Left | **INITIATIVES** (collapsible tree, shown when `.mdd/initiatives/` exists) · feature docs · audit reports · dep graph |
+| Right | Initiative overview, wave detail, or full doc/audit content with drift info, frontmatter chips, and markdown |
+| Top bar | Counts: docs · in-sync · drifted · broken · untracked · issues · audits · initiatives · active waves |
 
-**Keyboard shortcuts:** `↑↓` navigate, `→` / `Enter` open right panel, `←` back, `r` refresh/re-scan, `q` quit
+**Left panel sections (top to bottom):**
+- **INITIATIVES** — collapsible tree of initiatives and their waves. `▸` collapsed, `▾` expanded. Wave rows show `●` active / `✓` complete / `○` planned with a feature progress count (e.g. `2/3`).
+- **FEATURE DOCS** — all docs with drift icons: `✅` in sync · `⚠️` drifted · `❌` broken · `❓` untracked
+- **AUDIT REPORTS** — audit files from `.mdd/audits/`
+- **DEP GRAPH** — ASCII dependency map
+
+**Keyboard shortcuts:**
+
+| Key | Action |
+|-----|--------|
+| `↑` / `k` · `↓` / `j` | Navigate left panel / scroll right panel |
+| `→` / `l` / `Enter` | Focus right panel (or expand initiative) |
+| `←` / `h` / `Esc` | Focus left panel |
+| `i` | Jump to first initiative |
+| `Page Up` / `Page Down` | Scroll right panel one page |
+| `Home` / `End` | Jump to top / bottom of right panel |
+| `r` | Refresh and re-scan workspace |
+| `q` / `Ctrl+C` | Quit |
 
 The dashboard auto-detects drift by running `git log` against each doc's `last_synced` frontmatter field. Docs whose `source_files` have changed since last sync are marked ⚠️ drifted.
 
