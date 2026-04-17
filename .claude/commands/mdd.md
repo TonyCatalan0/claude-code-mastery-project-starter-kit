@@ -107,6 +107,7 @@ Parse `$ARGUMENTS` to determine the mode:
   - `plan-sync` → **Plan-Sync Mode** (jump to Phase PS)
   - `plan-remove-feature` → **Plan-Remove-Feature Mode** (jump to Phase PRF)
   - `plan-cancel-initiative` → **Plan-Cancel-Initiative Mode** (jump to Phase PCI)
+- If arguments start with `commands` → **Commands Mode** (jump to Phase CM)
 - If arguments are empty → ask the user what they want to do
 - Otherwise → **Build Mode** (the default — jump to Phase 1)
 
@@ -1796,6 +1797,46 @@ Report:
   Wave docs: archived (3 files)
   Feature docs: 5 flagged with known_issues warning
 ```
+
+---
+
+## COMMANDS MODE — `/mdd commands`
+
+Triggered when arguments start with `commands`. Outputs a reference table of every available MDD mode.
+
+### Phase CM — Render Mode Reference
+
+Read the **Step 0b — Detect Mode** block from this file (the loaded prompt). For every bullet point that maps an argument pattern to a mode, extract the trigger word(s) and the mode name. Then render the following table:
+
+```
+📋 MDD Commands — Mode Reference
+
+Command                                    | Description
+-------------------------------------------|------------------------------------------------------------
+/mdd <feature description>                 | Build Mode — Document, plan, and implement a new feature
+/mdd audit [section]                       | Audit Mode — Scan code against MDD docs for violations and drift
+/mdd status                                | Status Mode — Overview of docs, audits, tests, and initiatives
+/mdd scan                                  | Scan Mode — Detect features whose source files have changed since last sync
+/mdd update <feature-id>                   | Update Mode — Re-sync a feature doc after its code has changed
+/mdd note "text"                           | Note Mode — Append a timestamped note to .mdd/.startup.md
+/mdd note list                             | Note Mode — Print the Notes section of .mdd/.startup.md
+/mdd note clear                            | Note Mode — Wipe all notes (asks for confirmation)
+/mdd deprecate <feature-id>                | Deprecate Mode — Archive a feature and flag all dependents
+/mdd reverse-engineer [path|feature-id]   | Reverse-Engineer Mode — Generate MDD docs from existing source code
+/mdd graph                                 | Graph Mode — Render the full cross-feature dependency map
+/mdd upgrade                               | Upgrade Mode — Batch-patch missing frontmatter fields across all docs
+/mdd commands                              | Commands Mode — Show this reference table
+/mdd plan-initiative                       | Plan-Initiative Mode — Create a new multi-wave initiative
+/mdd plan-wave <wave-slug>                 | Plan-Wave Mode — Plan a wave within an existing initiative
+/mdd plan-execute <wave-slug>              | Plan-Execute Mode — Run the MDD build flow for every feature in a wave
+/mdd plan-sync                             | Plan-Sync Mode — Reconcile manual edits to initiative/wave files
+/mdd plan-remove-feature <wave> <feature>  | Plan-Remove-Feature Mode — Remove a feature from a wave
+/mdd plan-cancel-initiative <slug>         | Plan-Cancel-Initiative Mode — Cancel an initiative and archive its waves
+
+Run /mdd <feature description> to start building, or /mdd audit to check existing code.
+```
+
+No files are created or modified by this mode.
 
 ---
 
