@@ -713,12 +713,16 @@ Changes: <N files changed, N insertions, N deletions> (from git diff --stat)
 2. Commit using the `/commit` skill (which generates a conventional commit message from context)
 3. Switch to main: `git checkout main`
 4. Merge: `git merge feat/<feature-name> --no-ff -m "Merge feat/<feature-name>: <feature title>"`
-5. Report: "✅ Merged to main. Branch `feat/<feature-name>` preserved. Run `git push` when ready."
+5. Ask: "✅ Merged to main. Push to origin now? (yes / no)"
+   - If yes: `git push origin main`
+   - If no: report "Branch `feat/<feature-name>` preserved. Run `git push` when ready."
 
 **If (b) Commit only:**
 1. Stage all changes: `git add -A`
 2. Commit using the `/commit` skill
-3. Report: "✅ Committed on `feat/<feature-name>`. Merge to main when ready."
+3. Ask: "✅ Committed on `feat/<feature-name>`. Push this branch to origin? (yes / no)"
+   - If yes: `git push origin feat/<feature-name>`
+   - If no: report "Run `git push` when ready."
 
 **If (c) Skip:**
 Report: "Skipped. Branch `feat/<feature-name>` — run `/commit` and then merge when ready."
