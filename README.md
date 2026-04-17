@@ -131,7 +131,7 @@ Every phase reads the output of the previous phase, compressing context further 
 | 🔧 **Fix** | Execute pre-planned fixes with tests |
 | ✅ **Verify** | Tests pass, types check, documentation updated |
 
-### Usage — One Command, Fourteen Modes
+### Usage — One Command, Fifteen Modes
 
 ```bash
 # Build a new feature (Analyze → Document → Test skeletons → Plan → Implement → Verify)
@@ -191,6 +191,9 @@ Every phase reads the output of the previous phase, compressing context further 
 
 # Cancel an initiative and all its planned work
 /mdd plan-cancel-initiative auth-system
+
+# Show a reference table of every /mdd mode and what it does
+/mdd commands
 ```
 
 **Build mode** (`/mdd <description>`) — 7 phases, 3 mandatory gates:
@@ -1025,6 +1028,7 @@ The core MDD workflow command. Nine modes in one:
 - **`/mdd graph`** — ASCII dependency map from `depends_on` fields, with broken and risky dependency warnings.
 - **`/mdd deprecate <feature-id>`** — Archive a feature: move doc to `.mdd/docs/archive/`, flag dependents, optionally delete source and test files.
 - **`/mdd upgrade`** — Batch-patch missing `last_synced`/`status`/`phase` frontmatter across all docs. The fix when the MDD Dashboard shows all docs as UNTRACKED (❓). Non-destructive; shows plan before writing.
+- **`/mdd commands`** — Print a reference table of every MDD mode and what it does. Output is derived from the mode-detection block in `mdd.md` so it stays in sync as new modes are added.
 
 All artifacts are stored in `.mdd/` (docs in `.mdd/docs/`, audit reports in `.mdd/audits/`). See the [MDD Workflow](#mdd-workflow--manual-first-development--new) section above for full details and real results.
 
