@@ -147,6 +147,10 @@ Every phase reads the output of the previous phase, compressing context further 
 # Detect code that changed outside MDD — catch doc drift before it silently spreads
 /mdd scan
 
+# Create a one-off task doc (follows full MDD workflow, but frozen — never shows as drifted)
+/mdd task refactor db-query script
+/mdd task investigate auth flow latency
+
 # Update an existing feature doc after code has changed
 /mdd update 04            # by number
 /mdd update content-builder
@@ -220,6 +224,7 @@ Every phase reads the output of the previous phase, compressing context further 
 
 - A single Explore agent runs all `git log --after="<last_synced>"` checks in one pass
 - Returns a classification table: ✅ in sync / ⚠️ drifted / ❌ broken reference / ❓ untracked
+- Task docs (`type: task`) appear in a separate frozen section — never flagged as drifted
 - Saves a full drift report to `.mdd/audits/scan-<date>.md`
 
 **Update mode** (`/mdd update <feature-id>`) — re-syncs a feature doc after code changes:
@@ -1017,9 +1022,10 @@ Invoke these with `/command` in any Claude Code session. Each command is a markd
 
 ### `/mdd`
 
-The core MDD workflow command. Nine modes in one:
+The core MDD workflow command. Ten modes in one:
 
 - **`/mdd <feature description>`** — Build mode. Context-adaptive interview → documentation → test skeletons → named build plan → implementation → verification. Tests are generated before code. Claude presents a plan with time estimates and waits for approval.
+- **`/mdd task <description>`** — Task mode. Identical to Build mode, but stamps the doc with `type: task` — frozen after completion, never appears as drifted in `/mdd scan`. Use for one-off investigations, refactors, or any work that is done-and-finished by definition.
 - **`/mdd audit [section]`** — Audit mode. Reads all source files, writes incremental notes (survives compaction), produces a severity-rated findings report, and fixes everything. Works on the whole project or a specific section.
 - **`/mdd status`** — Quick overview of feature docs, last audit date, test coverage, open findings, quality gate violations, and a lightweight drift summary.
 - **`/mdd scan`** — Drift detection. Uses `git log` to find source files that changed since each feature doc's `last_synced` date. Flags drifted, broken, and untracked features.

@@ -8,6 +8,9 @@ source_files:
   - scripts/queries/
 models: []
 test_files: []
+last_synced: 2026-03-01
+status: complete
+phase: all
 known_issues:
   - StrictDB's registerCollection queues registrations but no validation of schema shapes before connect
 ---
