@@ -123,7 +123,7 @@ Before writing anything, gather context using **3 parallel Explore agents**. Lau
 
 **Agent A (Rules):** Read `CLAUDE.md` and `project-docs/ARCHITECTURE.md`. Return: key coding rules, quality gates, port assignments, architecture summary, any project-specific conventions relevant to this feature.
 
-**Agent B (Features):** Glob `.mdd/docs/*.md` and read each. Return: list of existing feature IDs + titles + status + `depends_on` chains. Flag any features that might relate to `$ARGUMENTS`.
+**Agent B (Features):** Glob `.mdd/docs/*.md` and read each. Return: list of existing feature IDs + titles + status + `depends_on` chains. Flag any features that might relate to `$ARGUMENTS`. Separate task docs (`type: task`) from feature docs — return them as a distinct list. Task docs must NOT appear in the depends_on candidates list presented to the user.
 
 **Agent C (Codebase):** Glob `src/**/*` and list files. Return: directory structure, key files per subdirectory, detected tech stack (framework, DB, test runner).
 
@@ -136,7 +136,7 @@ Before writing anything, gather context using **3 parallel Explore agents**. Lau
 Then ask the user targeted questions using AskUserQuestion. Ask ALL relevant questions upfront in a single interaction — don't spread them across multiple turns:
 
 **Always ask:**
-- "Does this feature depend on any existing features?" (list the ones from `.mdd/docs/`)
+- "Does this feature depend on any existing features?" (list only feature docs — omit task docs, which are one-off and frozen and not valid dependency targets)
 - "Are there any edge cases or error scenarios you already know about?"
 
 **Ask only for non-tooling tasks:**
@@ -229,7 +229,7 @@ The doc MUST follow this exact structure:
 id: <NN>-<feature-name>
 title: <Feature Title>
 edition: <project name or "Both">
-depends_on: [<list of documentation IDs this feature depends on>]
+depends_on: [<list of documentation IDs this feature depends on>]  ← feature docs only; never include task doc IDs (tasks are one-off and frozen)
 source_files:
   - <files that will be created>
 routes:
@@ -1231,6 +1231,8 @@ Build a directed graph: edge A → B means "A depends on B" (B must exist for A 
 **Broken dependency:** A doc lists a deprecated or archived feature in `depends_on`.
 
 **Risky dependency:** A `status: complete` feature depends on a `status: in_progress` or `status: draft` feature.
+
+**Task dependency:** A feature doc lists a task doc (`type: task`) in `depends_on`. Tasks are one-off and frozen — they carry no ongoing contract. Remove the task ID from `depends_on` and reference the relationship in Architecture or Dependencies prose instead.
 
 **Orphan:** A feature with no `depends_on` and no other feature depending on it.
 
