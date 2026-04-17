@@ -35,6 +35,8 @@ fi
 # Extract the first cd target from commands like "cd /path && git ..."
 if [ -z "$TARGET_DIR" ] && echo "$COMMAND" | grep -qE '^cd\s+[^ ]+'; then
     CD_DIR=$(echo "$COMMAND" | sed -nE 's/^cd\s+([^ &;]+).*/\1/p' | head -1)
+    # Expand leading tilde — [ -d "~/path" ] doesn't expand tilde inside quotes
+    CD_DIR="${CD_DIR/#\~/$HOME}"
     if [ -n "$CD_DIR" ] && [ -d "$CD_DIR" ]; then
         TARGET_DIR="$CD_DIR"
     fi
