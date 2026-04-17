@@ -31,6 +31,15 @@ if echo "$COMMAND" | grep -qE 'git\s+-C\s+[/~.\w]'; then
     TARGET_DIR=$(echo "$COMMAND" | sed -nE 's/.*git\s+-C\s+([^ ]+)\s+.*/\1/p' | head -1)
 fi
 
+# Also detect: cd /some/path && git commit (common cross-repo pattern)
+# Extract the first cd target from commands like "cd /path && git ..."
+if [ -z "$TARGET_DIR" ] && echo "$COMMAND" | grep -qE '^cd\s+[^ ]+'; then
+    CD_DIR=$(echo "$COMMAND" | sed -nE 's/^cd\s+([^ &;]+).*/\1/p' | head -1)
+    if [ -n "$CD_DIR" ] && [ -d "$CD_DIR" ]; then
+        TARGET_DIR="$CD_DIR"
+    fi
+fi
+
 # Resolve git dir — if git -C was used with a valid path, check THAT repo
 if [ -n "$TARGET_DIR" ] && [ -d "$TARGET_DIR" ]; then
     if ! git -C "$TARGET_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
