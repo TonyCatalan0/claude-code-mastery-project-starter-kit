@@ -689,6 +689,40 @@ When unblocked: resume at Phase 7b only. No re-implementation needed.
 3. **Update documentation** — add any `known_issues` discovered during implementation
 4. **Update CLAUDE.md** if new patterns were established
 
+#### Phase 7d — Commit & Merge
+
+**This phase runs after every completed MDD run (integration verified).** It does NOT run when blocked (Phase 7b failed).
+
+Run `git diff main...HEAD --stat` and show the user a compact summary of all changes on the branch.
+
+Then ask the user via AskUserQuestion:
+
+```
+🚀 Ready to ship?
+
+Branch: feat/<feature-name>
+Changes: <N files changed, N insertions, N deletions> (from git diff --stat)
+
+  (a) Commit & merge to main — stage all changes, commit, merge, return to main
+  (b) Commit only — stage and commit on this branch, stay here
+  (c) Skip — I'll handle git manually
+```
+
+**If (a) Commit & merge:**
+1. Stage all changes: `git add -A`
+2. Commit using the `/commit` skill (which generates a conventional commit message from context)
+3. Switch to main: `git checkout main`
+4. Merge: `git merge feat/<feature-name> --no-ff -m "Merge feat/<feature-name>: <feature title>"`
+5. Report: "✅ Merged to main. Branch `feat/<feature-name>` preserved. Run `git push` when ready."
+
+**If (b) Commit only:**
+1. Stage all changes: `git add -A`
+2. Commit using the `/commit` skill
+3. Report: "✅ Committed on `feat/<feature-name>`. Merge to main when ready."
+
+**If (c) Skip:**
+Report: "Skipped. Branch `feat/<feature-name>` — run `/commit` and then merge when ready."
+
 ---
 
 ## AUDIT MODE — `/mdd audit [section]`
