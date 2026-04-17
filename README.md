@@ -131,7 +131,7 @@ Every phase reads the output of the previous phase, compressing context further 
 | 🔧 **Fix** | Execute pre-planned fixes with tests |
 | ✅ **Verify** | Tests pass, types check, documentation updated |
 
-### Usage — One Command, Eight Modes
+### Usage — One Command, Fourteen Modes
 
 ```bash
 # Build a new feature (Analyze → Document → Test skeletons → Plan → Implement → Verify)
@@ -169,6 +169,28 @@ Every phase reads the output of the previous phase, compressing context further 
 /mdd note "just switched to PostgreSQL"
 /mdd note list          # view all notes
 /mdd note clear         # wipe notes section
+
+# ── Initiative / Wave Planning (NEW) ────────────────────────────────────────────
+
+# Create a new initiative (groups related waves and features into one roadmap item)
+/mdd plan-initiative "auth system"             # guided mode
+/mdd plan-initiative "auth system" --template  # write raw markdown yourself
+
+# Add a wave to an initiative (a phase of work with a concrete demo state)
+/mdd plan-wave auth-system "Auth Foundation"
+/mdd plan-wave auth-system "Auth Foundation" --template
+
+# Execute a wave — turns planned features into MDD docs and starts implementation
+/mdd plan-execute auth-system-wave-1
+
+# Sync wave docs after the parent initiative changes (version bump)
+/mdd plan-sync auth-system
+
+# Remove a feature from a wave (before it has a doc)
+/mdd plan-remove-feature auth-system-wave-1 auth-signup
+
+# Cancel an initiative and all its planned work
+/mdd plan-cancel-initiative auth-system
 ```
 
 **Build mode** (`/mdd <description>`) — 7 phases, 3 mandatory gates:
@@ -216,6 +238,7 @@ Every phase reads the output of the previous phase, compressing context further 
 - Flags broken dependencies (deprecated features still depended on)
 - Flags risky dependencies (complete features depending on in-progress ones)
 - Identifies orphans (no connections either way)
+- When `.mdd/initiatives/` exists: appends an initiative → wave → feature hierarchy tree showing progress and broken doc links
 
 **Deprecate mode** (`/mdd deprecate <feature-id>`) — retires a feature cleanly:
 
@@ -231,6 +254,40 @@ Every phase reads the output of the previous phase, compressing context further 
 - Shows a plan and asks for confirmation before writing anything
 - Run once when upgrading from an older MDD version; fixes the UNTRACKED (❓) state
 
+**Plan-initiative mode** (`/mdd plan-initiative <title>`) — creates a new initiative file in `.mdd/initiatives/`:
+
+- Interviews you about goals, target audience, and open product questions (guided mode), or writes the raw template for you to fill in (--template)
+- Generates a slug and a v1 hash; collision-checks against existing initiatives
+- If an initiative with the same slug already exists and has active wave docs, blocks with an error — active code must be deprecated before overwriting
+
+**Plan-wave mode** (`/mdd plan-wave <initiative-id> <wave-title>`) — adds a wave to an existing initiative:
+
+- Asks about demo state, feature list, and dependencies between features in the same wave
+- Writes a wave file in `.mdd/waves/` stamped with the initiative's current version
+- Validates that the parent initiative exists and is not cancelled
+
+**Plan-execute mode** (`/mdd plan-execute <wave-id>`) — turns a planned wave into real work:
+
+- Reads the wave file; for each planned feature without a doc, runs `/mdd <feature-slug>` build mode
+- Supports automated (run all) or interactive (confirm each feature) execution
+- Updates each feature's `docPath` and `waveStatus` in the wave file as docs are created
+
+**Plan-sync mode** (`/mdd plan-sync <initiative-id>`) — re-stamps all wave files after a version bump:
+
+- Run after editing an initiative (overview, questions) — updates `initiativeVersion` in all child waves
+- Surfaces stale waves flagged by `/mdd scan`
+
+**Plan-remove-feature mode** (`/mdd plan-remove-feature <wave-id> <feature-slug>`) — removes a feature from a wave before it has been executed:
+
+- Hard-stops if the feature already has a `docPath` — use `/mdd deprecate` for that instead
+- Confirms with the user before removing
+
+**Plan-cancel-initiative mode** (`/mdd plan-cancel-initiative <initiative-id>`) — cancels an initiative and all its planned work:
+
+- Sets initiative `status: cancelled` and all child wave statuses to `cancelled`
+- If any wave has executed features (docs with `docPath`), warns and asks how to handle them
+- Cancelled initiatives are still visible in the TUI dashboard (shown in gray)
+
 **MDD versioning** — every file created or updated by MDD is stamped with `mdd_version: N` in its frontmatter, where N matches the version declared in `mdd.md`. `/mdd status` shows a breakdown of which files are on which version so you can see at a glance what's out of sync. When you update MDD via `/install-mdd` or `/install-global mdd`, both commands compare `mdd_version` between the source and installed file and prompt before overwriting — no silent overwrites. Files without `mdd_version` (created before versioning was introduced) are treated as version 0 and flagged as outdated.
 
 ### The `.mdd/` Directory
@@ -243,6 +300,10 @@ All MDD artifacts live in a single dotfile directory, gitignored by default:
 │   ├── 01-<feature-name>.md          # auto-numbered, YAML frontmatter + last_synced/status/phase
 │   ├── 02-<feature-name>.md
 │   └── archive/                      # Deprecated feature docs (set by /mdd deprecate)
+├── initiatives/                      # Initiative files (created by /mdd plan-initiative)
+│   └── <initiative-slug>.md          # YAML frontmatter: id, title, status, version, hash
+├── waves/                            # Wave files (created by /mdd plan-wave)
+│   └── <initiative-slug>-wave-N.md   # YAML frontmatter + feature table; links back to docs
 ├── audits/                           # Audit artifacts (all gitignored)
 │   ├── flow-<feature>-<date>.md      # Data flow analysis written during Phase 2
 │   ├── notes-<date>.md               # Raw reading notes (Phase A2, written every 2 features)

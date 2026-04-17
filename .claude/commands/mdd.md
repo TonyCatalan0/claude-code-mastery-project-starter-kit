@@ -100,6 +100,13 @@ Parse `$ARGUMENTS` to determine the mode:
 - If arguments start with `reverse-engineer` or `reverse` → **Reverse-Engineer Mode** (jump to Phase R)
 - If arguments start with `graph` → **Graph Mode** (jump to Phase G)
 - If arguments start with `upgrade` → **Upgrade Mode** (jump to Phase UP)
+- If arguments start with `plan-` → **Plan Mode** — sub-dispatch:
+  - `plan-initiative` → **Plan-Initiative Mode** (jump to Phase PI)
+  - `plan-wave` → **Plan-Wave Mode** (jump to Phase PW)
+  - `plan-execute` → **Plan-Execute Mode** (jump to Phase PE)
+  - `plan-sync` → **Plan-Sync Mode** (jump to Phase PS)
+  - `plan-remove-feature` → **Plan-Remove-Feature Mode** (jump to Phase PRF)
+  - `plan-cancel-initiative` → **Plan-Cancel-Initiative Mode** (jump to Phase PCI)
 - If arguments are empty → ask the user what they want to do
 - Otherwise → **Build Mode** (the default — jump to Phase 1)
 
@@ -796,6 +803,8 @@ Quick overview of MDD state for the project:
 4. **Count known issues** — grep `known_issues` across all docs
 5. **Read current mdd_version** — from `mdd.md` frontmatter (or `~/.claude/commands/mdd.md` if not local)
 6. **Scan all `.mdd/` files** — grep `mdd_version` from each, group by version number
+7. **Scan `.mdd/initiatives/`** — count initiative files, group by status
+8. **Scan `.mdd/waves/`** — count wave files, group by status; for each active wave count complete vs total features
 
 Present:
 ```
@@ -807,6 +816,10 @@ Test coverage:    <N> unit tests, <N> E2E tests
 Known issues:     <N> tracked across <N> features
 Quality gates:    <N> files over 300 lines
 
+Initiatives:      <N> total (<N> active, <N> planned, <N> complete, <N> cancelled)
+  Active waves:   <wave-title> [<done>/<total> features complete]  (one line per active wave)
+  (shown only if .mdd/initiatives/ exists and has files; omit section entirely if directory is absent)
+
 MDD version:      v<N> (current)
   v<N>: <N> files — up to date
   v<N-1>: <N> files — run /install-mdd to update the command, then /mdd audit to refresh docs
@@ -817,7 +830,7 @@ Drift check:
   <N> features possibly drifted  ← run /mdd scan for details
   <N> features untracked         ← no last_synced field yet
 
-Run `/mdd audit` to refresh, `/mdd scan` to see drift details, or `/mdd <feature>` to build something new.
+Run `/mdd audit` to refresh, `/mdd scan` to see drift details, `/mdd plan-initiative` to start an initiative, or `/mdd <feature>` to build something new.
 ```
 
 If all files are on the current `mdd_version`, omit the version breakdown and just show: `MDD version: v<N> — all files up to date`
@@ -881,9 +894,9 @@ Triggered when arguments start with `note`. Three subcommands:
 
 ## SCAN MODE — `/mdd scan`
 
-Triggered when arguments start with `scan`. Detects features whose source files have changed since the last MDD session.
+Triggered when arguments start with `scan`. Detects features whose source files have changed since the last MDD session, and checks for initiative/wave drift.
 
-### Phase SC1 — Read all feature docs
+### Phase SC1 — Read all feature docs and initiative/wave files
 
 Read every `.mdd/docs/*.md` (excluding `archive/`). For each, extract:
 - `last_synced` from frontmatter
@@ -954,6 +967,20 @@ Recommended actions:
   /mdd update 04   — re-sync content-builder doc with code
   /mdd update 07   — fix broken file reference
   /mdd update 09   — add last_synced by running update mode
+```
+
+**Initiative/wave drift check** (only shown if `.mdd/initiatives/` exists):
+
+For each initiative in `.mdd/initiatives/`:
+- Read its `version` field from frontmatter
+- For each of its waves (in `.mdd/waves/`), check that the wave's `initiativeVersion` matches the initiative's current `version`
+- If a wave's `initiativeVersion` is older → flag as stale (run `/mdd plan-sync <initiative-id>` to refresh)
+
+```
+Initiatives:
+  ✅ auth-system (v2) — all waves in sync
+  ⚠️  payment-flow (v3) — 1 stale wave
+       payment-flow-wave-2 (initiativeVersion: 2, initiative now: 3) → run /mdd plan-sync payment-flow
 ```
 
 Save the full report to `.mdd/audits/scan-<date>.md`.
@@ -1188,13 +1215,15 @@ If yes, follow Phase 4 logic using the newly written doc.
 
 ## GRAPH MODE — `/mdd graph`
 
-Triggered when arguments start with `graph`. Shows the cross-feature dependency map.
+Triggered when arguments start with `graph`. Shows the cross-feature dependency map, plus initiative/wave structure if present.
 
 ### Phase G1 — Build dependency graph
 
 Read all `.mdd/docs/*.md` (including `archive/`). For each doc, extract `id`, `title`, `status`, and `depends_on`.
 
 Build a directed graph: edge A → B means "A depends on B" (B must exist for A to work).
+
+**Initiative/wave graph** (only shown if `.mdd/initiatives/` exists): Also read all initiative and wave files. Build a second graph showing the initiative → wave → feature doc hierarchy.
 
 ### Phase G2 — Detect issues
 
@@ -1203,6 +1232,11 @@ Build a directed graph: edge A → B means "A depends on B" (B must exist for A 
 **Risky dependency:** A `status: complete` feature depends on a `status: in_progress` or `status: draft` feature.
 
 **Orphan:** A feature with no `depends_on` and no other feature depending on it.
+
+**Wave/initiative issues:**
+- A wave's `docPath` points to a feature doc that does not exist → broken link
+- A wave references a `dependsOn` wave that is not in the same initiative → invalid (cross-initiative deps not supported)
+- A feature doc whose slug appears in a wave but has no `docPath` set and status is `complete` → doc missing for completed feature
 
 ### Phase G3 — Render
 
@@ -1223,6 +1257,21 @@ Orphans (no dependencies, no dependents):
 Issues:
   ⚠️  09-integrations depends on 06-command-system (status: in_progress) — risky
   ❌  05-testing-framework depends on 10-mdd-refinements (deprecated) — broken
+```
+
+**Initiative/wave section** (appended when initiatives exist):
+
+```
+📋 Initiative / Wave Hierarchy
+
+  auth-system (active, v2)
+    ├─ wave-1: Auth Foundation [complete] ✓ 3/3 features
+    └─ wave-2: Auth Hardening [active]    ● 1/2 features
+         ├─ auth-2fa       → docs/18-auth-2fa.md        ✅
+         └─ auth-rate-limit → (no doc yet)              ❓
+
+Issues:
+  ❓  auth-system / wave-2 / auth-rate-limit — complete in wave but no doc path set
 ```
 
 Save the graph to `.mdd/audits/graph-<date>.md`.
@@ -1396,6 +1445,356 @@ Fields added:
 Docs skipped:     <N> (all fields already present)
 
 Run `/mdd scan` to see current drift status across all docs.
+```
+
+---
+
+---
+
+## PLAN-INITIATIVE MODE — `/mdd plan-initiative`
+
+Triggered when arguments start with `plan-initiative`. Creates a new initiative doc.
+
+### Phase PI1 — Mode choice
+
+Ask the user:
+```
+How do you want to create this initiative?
+  (a) Guide me — I'll ask questions and build the file
+  (b) Template — generate a blank file I'll fill out manually
+```
+
+**If (b) Template:**
+1. Ask for a title (e.g. "Auth System") → slugify to `auth-system`
+2. Check for slug collision: if `initiatives/auth-system.md` already exists → hard stop:
+   *"An initiative with this name already exists (`initiatives/auth-system.md`)."*
+   - Check all wave docs for active feature docs (`wave_status` not `complete`/`archived`/`deprecated`)
+   - If active docs found → *"This initiative has active feature docs. Deprecate them first before re-initialising."* List them.
+   - If no active docs → ask "Overwrite? (yes/no)"
+3. Create `.mdd/initiatives/<slug>.md` with blank template (all sections as placeholders, `version: 1`, `hash: ` empty)
+4. Tell user: *"Fill it out in your editor, then run `/mdd plan-sync` to register the hash, then `/mdd plan-wave <wave-slug>` when ready."*
+5. Stop.
+
+**If (a) Guide me:** proceed to Phase PI2.
+
+### Phase PI2 — Questions
+
+Ask all questions in a single interaction:
+1. "What is the title of this initiative?"
+2. "Describe it — what does it deliver and why does it exist?"
+3. "Roughly how many waves do you think this needs? (2–6 is typical)"
+4. For each wave: "Wave N — name and one-sentence demo-state (what can the user DO when this wave is done?)"
+5. "What's still undecided that could affect architecture?" → these become open product questions (unchecked `- [ ]` items)
+
+### Phase PI3 — Write initiative doc
+
+**Slug format:** lowercase, hyphens, no special characters. "Auth System" → `auth-system`.
+
+**Collision check:** same as template mode above.
+
+Create `.mdd/initiatives/<slug>.md`:
+
+```markdown
+---
+id: <slug>
+title: <title>
+status: active
+version: 1
+hash:
+created: <YYYY-MM-DD>
+---
+
+# <title>
+
+## Overview
+<description>
+
+## Open Product Questions
+- [ ] <question 1>
+- [ ] <question 2>
+
+## Waves
+| Wave | File | Demo-state | Status |
+|------|------|------------|--------|
+| Wave 1 | waves/<slug>-wave-1.md | <demo-state> | planned |
+| Wave 2 | waves/<slug>-wave-2.md | <demo-state> | planned |
+```
+
+Compute and write `hash:` field after writing (hash of file content excluding the hash line).
+
+Rebuild `.mdd/.startup.md`.
+
+### Phase PI4 — Chain to plan-wave
+
+Show the created doc to the user. Ask:
+*"Want to plan Wave 1 now? (yes / no — I'll run /mdd plan-wave <slug>-wave-1 later)"*
+
+If yes → run Phase PW1 inline for `<slug>-wave-1`.
+
+---
+
+## PLAN-WAVE MODE — `/mdd plan-wave <wave-slug>`
+
+Triggered when arguments start with `plan-wave`. Takes a wave slug (e.g. `auth-system-wave-2`), resolves the parent initiative from it.
+
+### Phase PW1 — Load and validate
+
+1. Parse `<wave-slug>` from arguments — hard stop *"Wave slug required. Usage: /mdd plan-wave <wave-slug>"* if missing.
+2. Derive initiative slug: everything before `-wave-N` (e.g. `auth-system-wave-2` → `auth-system`).
+3. Read `initiatives/<initiative-slug>.md` fresh from disk — hard stop *"Initiative does not exist: `initiatives/<slug>.md`"* if not found.
+4. **Hash check:** compute hash of initiative file (excluding `hash:` line), compare to stored `hash:` field. If mismatch → hard stop: *"Initiative file has been manually edited since last sync. Run `/mdd plan-sync` first."*
+5. **Open questions gate:** check for any unchecked `- [ ]` items in Open Product Questions. If found → hard stop, quote each unchecked question back: *"These questions must be answered before planning a wave."*
+6. **Depends-on gate:** read existing wave docs for this initiative. If the new wave's `depends_on` wave exists and is not `complete` → hard stop.
+7. Surface context summary to user: initiative title, overview, wave count, which waves are done.
+
+### Phase PW2 — Mode choice
+
+Same as PI1: ask "(a) Guide me / (b) Template".
+
+**If (b) Template:** create `waves/<wave-slug>.md` with blank template, tell user to fill it out and run `/mdd plan-sync` then `/mdd plan-execute <wave-slug>`.
+
+**If (a) Guide me:** proceed to Phase PW3.
+
+### Phase PW3 — Questions
+
+Ask in a single interaction:
+1. "Here's the demo-state from the initiative: [X]. Does this need sharpening for this wave?"
+2. "List the features needed to reach that demo-state — name + one-line description each."
+3. "Do any features depend on other features within this wave?"
+4. "Any open research questions before building? Or none?"
+
+### Phase PW4 — Write wave doc
+
+Create `waves/<wave-slug>.md`:
+
+```markdown
+---
+id: <wave-slug>
+title: "Wave N: <title>"
+initiative: <initiative-slug>
+initiative_version: <current initiative version>
+status: planned
+depends_on: none
+demo_state: "<demo-state>"
+created: <YYYY-MM-DD>
+hash:
+---
+
+# Wave N: <title>
+
+## Demo-State
+<demo-state>
+*(This wave is not complete until this can be manually demonstrated.)*
+
+## Features
+| # | Feature | Doc | Status | Depends on |
+|---|---------|-----|--------|------------|
+| 1 | <feature-slug> | — | planned | — |
+| 2 | <feature-slug> | — | planned | <dep-slug or —> |
+
+## Open Research
+<research items or (none)>
+```
+
+Compute and write `hash:` field. Update the Waves table in `initiatives/<slug>.md` to add this wave row. Increment `version` and recompute `hash` on the initiative file.
+
+Rebuild `.mdd/.startup.md`.
+
+### Phase PW5 — Chain
+
+Ask: *"Want to plan Wave N+1 now? (yes / no)"*
+If yes → run Phase PW1 inline for the next wave slug.
+
+---
+
+## PLAN-EXECUTE MODE — `/mdd plan-execute <wave-slug>`
+
+Triggered when arguments start with `plan-execute`. Runs the full MDD build flow for each feature in the wave.
+
+### Phase PE1 — Load and validate
+
+1. Parse `<wave-slug>` — hard stop *"Wave does not exist"* if `waves/<wave-slug>.md` not found.
+2. Read the wave doc.
+3. Derive and read the parent initiative — hard stop if not found.
+4. **Hash check:** verify both initiative and wave file hashes. Hard stop on any mismatch: *"File has been manually edited since last sync. Run `/mdd plan-sync` first."*
+5. **Depends-on gate:** if wave's `depends_on` is not `none`, verify that wave is `complete`. Hard stop if not.
+6. **Feature ordering check (Gap 4):** build dependency graph of features within the wave. If any ordering violation found → hard stop, explain exact conflict, offer auto-reorder.
+
+### Phase PE2 — Interaction mode
+
+Ask:
+```
+How do you want to run this wave?
+  (a) Automated — minimal interruptions, pauses only on errors
+  (b) Interactive — full MDD gates on every feature
+```
+
+**Automated:** data flow shown but not gated, build plan shown but not gated, green gate runs silently. On 5-iteration failure or integration failure → pause and surface to user with options (continue / narrow scope / stop). Does NOT fail the whole wave.
+
+**Interactive:** full Phase 2 gate, Phase 5 plan confirmation, green gate iteration prompts on every feature.
+
+### Phase PE3 — Execute features
+
+For each feature in the wave's feature table, in dependency order, skipping `complete` features:
+
+1. Tell user: *"Starting Feature N: <feature-slug>"*
+2. Flip `wave_status: active` for this feature in the wave doc immediately.
+3. Update the wave doc's `Doc` column with the feature doc path (once created in MDD Phase 3).
+4. Run full MDD Build Mode (Phases 1–7) for the feature, at the chosen interaction level.
+   - Feature doc is auto-numbered from `.mdd/docs/` and gets `initiative`, `wave`, `wave_status` fields added.
+5. After Phase 7 verify: flip `wave_status: complete` in wave doc.
+6. Ask: *"Feature N done ✓. Start Feature N+1? (yes / pause here)"*
+
+**Resume behaviour (Gap 2):** if re-run on a partially complete wave, read each feature's `wave_status`. Skip `complete`. Resume at first `active` or `planned`. If `active` but no doc exists → restart from Phase 1.
+
+### Phase PE4 — Wave completion
+
+When all features are `complete`:
+1. Show the demo-state: *"Wave complete. Demo-state: '<demo-state>'. Have you verified this?"*
+2. User confirms → flip wave `status: complete` in both `waves/<slug>.md` AND the waves table in `initiatives/<slug>.md`.
+3. Recompute hashes for both files.
+4. If all waves in initiative are `complete` → ask: *"All waves done. Mark initiative complete? (yes / no)"*
+5. Rebuild `.mdd/.startup.md`.
+
+---
+
+## PLAN-SYNC MODE — `/mdd plan-sync`
+
+Triggered when arguments start with `plan-sync`. Detects manual edits to initiative/wave files via hash comparison and reconciles them.
+
+### Phase PS1 — Scan all files
+
+Read every file in `.mdd/initiatives/` and `.mdd/waves/` (including `archive/`). For each, compute the hash of the file content (excluding the `hash:` line). Compare against stored `hash:` field.
+
+Build a change table:
+```
+Initiative / Wave                | Stored hash | Computed hash | Changed?
+auth-system.md                   | a3f5b2c1    | a3f5b2c1      | No
+auth-system-wave-1.md            | def456      | abc999        | YES
+billing-module.md                | (empty)     | xyz111        | YES (new — no hash yet)
+```
+
+### Phase PS2 — Present changes + confirm
+
+Show the full change table. Tell the user what will happen:
+
+- **Initiative changed:** version incremented, hash updated, completed waves with old `initiative_version` flagged for review
+- **Wave changed:** hash updated, completed features in that wave flagged for review
+- **No hash yet (new file):** hash computed and written — no version bump needed
+
+Ask: *"Apply these updates? (yes / review each / cancel)"*
+
+### Phase PS3 — Apply
+
+For each changed file, in initiative-first order:
+
+**Initiative changed:**
+1. Increment `version` field
+2. Rewrite `hash:` field
+3. Find all wave docs for this initiative where `status: complete` AND `initiative_version` < new version
+4. Prompt: *"Initiative updated (v1 → v2) since these waves were completed: [list]. Mark them back to in_progress for review? (yes / no / skip)"*
+   - `yes` → flip those waves back to `in_progress`
+   - `no` / `skip` → leave them complete
+
+**Wave changed:**
+1. Rewrite `hash:` field
+2. Find all features in this wave with `wave_status: complete`
+3. Prompt: *"Wave file edited since these features were completed: [list]. Flag for review? (yes / no)"*
+   - `yes` → add a `known_issues` entry to each feature doc: *"Wave file was manually edited after this feature completed — review for consistency."*
+
+**New file (no hash):**
+1. Write computed hash to `hash:` field — no other changes
+
+Rebuild `.mdd/.startup.md`.
+
+Report:
+```
+✅ plan-sync complete
+
+  auth-system.md            — no change
+  auth-system-wave-1.md     — hash updated, 2 features flagged
+  billing-module.md         — hash written (new file)
+```
+
+---
+
+## PLAN-REMOVE-FEATURE MODE — `/mdd plan-remove-feature <wave-slug> <feature-slug>`
+
+Triggered when arguments start with `plan-remove-feature`.
+
+### Phase PRF1 — Load and validate
+
+1. Parse `<wave-slug>` and `<feature-slug>` from arguments.
+2. Read wave doc — hard stop *"Wave does not exist"* if not found.
+3. Find the feature row — hard stop *"Feature `<slug>` does not exist in wave `<wave-slug>`"* if not found.
+4. **Dependency guard:** check if any other feature in the wave lists `<feature-slug>` in its `Depends on` column. If so → hard stop: *"`<other-feature>` depends on `<feature-slug>`. Remove or reassign that dependency first."*
+
+### Phase PRF2 — Confirm and remove
+
+Show summary:
+```
+Remove feature from wave?
+
+  Feature:  auth-login
+  Wave:     auth-system-wave-1
+  Doc:      docs/02-auth-login.md (draft)
+  Status:   planned
+
+Remove from wave? (yes/no)
+```
+
+If yes and a feature doc exists: *"Archive feature doc? (yes/no)"*
+
+If confirmed:
+1. Remove the feature row from the wave doc table.
+2. Renumber the `#` column sequentially (cosmetic — `Depends on` uses slugs, not numbers, so renumbering is safe).
+3. If archiving doc: move to `.mdd/docs/archive/`, set `status: archived`, `wave_status: archived`.
+4. Recompute and update `hash:` on wave doc.
+5. Tell user: *"Re-run `/mdd plan-execute <wave-slug>` to continue the wave."*
+
+Rebuild `.mdd/.startup.md`.
+
+---
+
+## PLAN-CANCEL-INITIATIVE MODE — `/mdd plan-cancel-initiative <slug>`
+
+Triggered when arguments start with `plan-cancel-initiative`.
+
+### Phase PCI1 — Load
+
+1. Parse `<slug>` — hard stop *"Initiative does not exist"* if `initiatives/<slug>.md` not found.
+2. Read initiative doc. Count: waves, wave statuses, associated feature docs (those with `initiative: <slug>` frontmatter).
+
+### Phase PCI2 — Confirm
+
+Show summary:
+```
+Cancel initiative: Auth System
+
+  Status:        active
+  Waves:         3 (1 complete, 2 active)
+  Feature docs:  5 created
+
+Cancel this initiative? (yes/no)
+```
+
+If yes:
+
+### Phase PCI3 — Cancel
+
+1. Set `status: cancelled` in initiative frontmatter. Recompute hash.
+2. Ask: *"Archive wave docs? (yes/no)"* — if yes, move all wave files to `.mdd/waves/archive/`
+3. Ask: *"Flag feature docs with a warning? (yes/no)"* — if yes, add to each associated feature doc's `known_issues`: `"Initiative <slug> was cancelled — review whether this feature is still needed."`
+
+Rebuild `.mdd/.startup.md`.
+
+Report:
+```
+✅ Initiative cancelled: auth-system
+
+  Status set: cancelled
+  Wave docs: archived (3 files)
+  Feature docs: 5 flagged with known_issues warning
 ```
 
 ---
