@@ -627,24 +627,30 @@ mdd status       # same — all three open the dashboard</code></pre>
         <div class="commands-grid" style="grid-template-columns: 1fr 1fr; margin: 1.5rem 0;">
           <div class="command-card">
             <h3>Left Panel</h3>
-            <p class="command-desc">All feature docs, audit reports (scan, flow, notes, results), and dependency graph — navigated with <kbd>↑↓</kbd> arrow keys.</p>
+            <p class="command-desc"><strong>INITIATIVES</strong> (collapsible tree, shown when <code>.mdd/initiatives/</code> exists) &rarr; feature docs &rarr; audit reports &rarr; dep graph. <kbd>↑↓</kbd> to navigate, <kbd>Enter</kbd> to expand an initiative.</p>
           </div>
           <div class="command-card">
             <h3>Right Panel</h3>
-            <p class="command-desc">Full doc or audit content with drift chips, frontmatter badges, and scrollable markdown. Press <kbd>→</kbd> to focus, <kbd>↑↓</kbd> to scroll, <kbd>←</kbd> to return.</p>
+            <p class="command-desc">Initiative overview &amp; wave detail, or full doc/audit content with drift chips, frontmatter badges, and scrollable markdown. Press <kbd>→</kbd> to focus, <kbd>↑↓</kbd> to scroll, <kbd>←</kbd> to return.</p>
           </div>
           <div class="command-card">
             <h3>Status Bar</h3>
-            <p class="command-desc">Live counts: total docs, in-sync, drifted, broken, untracked, open issues, and audits. Updated on every <kbd>r</kbd> refresh.</p>
+            <p class="command-desc">Live counts: docs &middot; in-sync &middot; drifted &middot; broken &middot; untracked &middot; issues &middot; audits &middot; <strong>initiatives &middot; active waves</strong>. Updated on every <kbd>r</kbd> refresh.</p>
           </div>
           <div class="command-card">
             <h3>Drift Detection</h3>
-            <p class="command-desc">Auto-runs <code>git log</code> against each doc's <code>last_synced</code> field. Docs whose <code>source_files</code> changed since last sync are marked <strong>⚠️ drifted</strong>.</p>
+            <p class="command-desc">Auto-runs <code>git log</code> against each doc's <code>last_synced</code> field. Docs whose <code>source_files</code> changed since last sync are marked <strong>⚠️ drifted</strong>. Stale waves (version mismatch) flagged separately.</p>
           </div>
         </div>
 
         <div class="callout" style="background: var(--bg-secondary); border-left: 4px solid var(--accent-cyan); padding: 1rem 1.25rem; border-radius: 0.5rem;">
-          <strong>Keyboard shortcuts:</strong> <kbd>↑↓</kbd> navigate &middot; <kbd>→</kbd> / <kbd>Enter</kbd> open right panel &middot; <kbd>←</kbd> back &middot; <kbd>r</kbd> re-scan &middot; <kbd>q</kbd> quit
+          <strong>Keyboard shortcuts:</strong>
+          <kbd>↑</kbd>/<kbd>k</kbd> &middot; <kbd>↓</kbd>/<kbd>j</kbd> navigate &middot;
+          <kbd>→</kbd>/<kbd>l</kbd>/<kbd>Enter</kbd> focus right or expand initiative &middot;
+          <kbd>←</kbd>/<kbd>h</kbd>/<kbd>Esc</kbd> back &middot;
+          <kbd>i</kbd> jump to first initiative &middot;
+          <kbd>PgUp</kbd>/<kbd>PgDn</kbd> scroll page &middot;
+          <kbd>r</kbd> refresh &middot; <kbd>q</kbd> quit
         </div>
 
         <p style="margin-top: 1rem;">npm: <a href="https://www.npmjs.com/package/mdd-tui" target="_blank" rel="noopener">mdd-tui</a> &middot; <a href="https://github.com/TheDecipherist/mdd" target="_blank" rel="noopener">GitHub</a></p>
