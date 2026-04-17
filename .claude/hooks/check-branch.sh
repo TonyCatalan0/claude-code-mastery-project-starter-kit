@@ -68,13 +68,38 @@ if [ "$BRANCH" != "main" ] && [ "$BRANCH" != "master" ]; then
 fi
 
 # Check auto_branch setting (default: true)
+# Look for claude-mastery-project.conf in the target repo first, then CWD.
+# If neither has the conf file, this is not a starter kit project — skip the check.
 AUTO_BRANCH="true"
+CONF_FOUND=false
 CONF="claude-mastery-project.conf"
-if [ -f "$CONF" ]; then
+
+# Determine where to look for the conf — target dir or CWD
+CONF_SEARCH_DIR=""
+if [ -n "$TARGET_DIR" ] && [ -d "$TARGET_DIR" ]; then
+    CONF_SEARCH_DIR="$TARGET_DIR"
+else
+    CONF_SEARCH_DIR="."
+fi
+
+if [ -f "${CONF_SEARCH_DIR}/${CONF}" ]; then
+    CONF_FOUND=true
+    SETTING=$(grep -E '^\s*auto_branch\s*=' "${CONF_SEARCH_DIR}/${CONF}" 2>/dev/null | head -1 | sed 's/.*=\s*//' | sed 's/\s*#.*//' | tr -d ' ')
+    if [ -n "$SETTING" ]; then
+        AUTO_BRANCH="$SETTING"
+    fi
+elif [ -f "$CONF" ]; then
+    # Fallback: conf exists in CWD (classic case where no cd was used)
+    CONF_FOUND=true
     SETTING=$(grep -E '^\s*auto_branch\s*=' "$CONF" 2>/dev/null | head -1 | sed 's/.*=\s*//' | sed 's/\s*#.*//' | tr -d ' ')
     if [ -n "$SETTING" ]; then
         AUTO_BRANCH="$SETTING"
     fi
+fi
+
+# If no starter-kit conf found anywhere, this isn't a starter-kit project — allow commit
+if [ "$CONF_FOUND" = false ]; then
+    exit 0
 fi
 
 if [ "$AUTO_BRANCH" = "true" ]; then
