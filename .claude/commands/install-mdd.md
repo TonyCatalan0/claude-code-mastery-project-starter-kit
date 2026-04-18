@@ -55,20 +55,25 @@ INSTALLED_VERSION=$(grep "^mdd_version:" "$TARGET/.claude/commands/mdd.md" | awk
 INSTALLED_VERSION=${INSTALLED_VERSION:-0}
 ```
 
-If versions differ, surface the mismatch:
+If versions differ, present an upgrade prompt:
 ```
-MDD is already installed in this project.
-  Installed: v<INSTALLED_VERSION>
-  Available: v<SOURCE_VERSION>  ← update available
-```
+✅ MDD is already installed in this project.
 
-Ask: "Update mdd.md to v<SOURCE_VERSION> and reset .mdd/.startup.md? (yes / no)"
+  Installed: v<INSTALLED_VERSION>
+  Available: v<SOURCE_VERSION>  ← upgrade available
+
+Upgrade mdd.md from v<INSTALLED_VERSION> to v<SOURCE_VERSION>?
+Your docs, audits, and .startup.md are not affected. (yes / no)
+```
 
 If versions are equal:
 ```
-MDD is already installed in this project (v<VERSION> — up to date).
+✅ MDD is already installed (v<VERSION> — up to date).
+
+Everything looks good. You can re-run the installer if you need to
+repair missing directories or re-generate a blank .mdd/.startup.md.
 ```
-Ask: "Re-run to reset .mdd/.startup.md and ensure directories exist? (yes / no)"
+Ask: "Repair / re-generate any missing MDD files? (yes / no)"
 
 If no: exit with `"Nothing changed."`
 If yes: continue (existing docs and audits are preserved — only missing pieces are created).
