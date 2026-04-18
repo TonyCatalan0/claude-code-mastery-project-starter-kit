@@ -47,12 +47,12 @@ INSTALLED_VERSION=${INSTALLED_VERSION:-0}
 - If the file **already exists** and versions match → skip, report "already up to date"
 - If the file **does NOT exist** → copy it
 
-**After copying**, update the `description` field in each installed file to prepend `(global)` so it is distinguishable from project-level copies in the Claude command list:
+**After handling each file** (whether copied or skipped), always ensure the `(global)` prefix is present in the installed copy's `description` field. Run the sed unconditionally — it is idempotent and safe to run even if `(global)` is already present (the pattern only matches when `(global)` is absent):
 
 ```bash
-# Prepend (global) to description in the installed copy
-sed -i 's/^description: "\(.*\)"$/description: "(global) \1"/' ~/.claude/commands/mdd.md
-sed -i 's/^description: "\(.*\)"$/description: "(global) \1"/' ~/.claude/commands/install-mdd.md
+# Ensure (global) prefix — idempotent: only adds if not already present
+sed -i 's/^description: "\([^(]\)/description: "(global) \1/' ~/.claude/commands/mdd.md
+sed -i 's/^description: "\([^(]\)/description: "(global) \1/' ~/.claude/commands/install-mdd.md
 ```
 
 This only modifies the installed copy at `~/.claude/commands/` — the source files in `.claude/commands/` are never touched.
@@ -64,8 +64,8 @@ Global MDD Update
   ✓ mdd.md — v<INSTALLED> → v<SOURCE> (updated) [labelled "global"]
   ✓ install-mdd.md — updated [labelled "global"]
   — OR —
-  ✓ mdd.md — v<VERSION> already up to date
-  ✓ install-mdd.md — updated [labelled "global"]
+  ✓ mdd.md — v<VERSION> already up to date [labelled "global"]
+  ✓ install-mdd.md — already up to date [labelled "global"]
 
 /mdd is now current in every project on this machine.
 ```
@@ -192,23 +192,23 @@ For each file (`mdd.md`, `install-mdd.md`):
 - If the file **already exists** at `~/.claude/commands/` → ask: "mdd.md already exists globally (installed: v<INSTALLED_VERSION>, available: v<SOURCE_VERSION>). Overwrite? (yes / keep existing)"
 - If it **does NOT exist** → copy it from `.claude/commands/`
 
-**After copying**, prepend `(global)` to the `description` field in each installed file:
+**After handling each file** (whether copied, updated, or skipped), always ensure the `(global)` prefix is present. Run the sed unconditionally — it is idempotent and only adds the prefix if absent:
 ```bash
-sed -i 's/^description: "\(.*\)"$/description: "(global) \1"/' ~/.claude/commands/mdd.md
-sed -i 's/^description: "\(.*\)"$/description: "(global) \1"/' ~/.claude/commands/install-mdd.md
+sed -i 's/^description: "\([^(]\)/description: "(global) \1/' ~/.claude/commands/mdd.md
+sed -i 's/^description: "\([^(]\)/description: "(global) \1/' ~/.claude/commands/install-mdd.md
 ```
 
 Report:
 ```
 Global MDD install:
-  + mdd.md — installed (now available as /mdd in every project)
-  + install-mdd.md — installed (now available as /install-mdd in every project)
+  + mdd.md — installed [labelled "global"]
+  + install-mdd.md — installed [labelled "global"]
 ```
 or
 ```
 Global MDD install:
-  ✓ mdd.md — already up to date, skipped
-  + install-mdd.md — installed
+  ✓ mdd.md — already up to date [labelled "global"]
+  + install-mdd.md — installed [labelled "global"]
 ```
 
 ---
