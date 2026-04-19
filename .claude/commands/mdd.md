@@ -38,6 +38,7 @@ Before detecting mode or doing anything else, ensure the `.mdd/` directory struc
 [ -d .mdd ]           || mkdir -p .mdd
 [ -d .mdd/docs ]      || mkdir -p .mdd/docs
 [ -d .mdd/audits ]    || mkdir -p .mdd/audits
+[ -d .mdd/ops ]       || mkdir -p .mdd/ops
 ```
 
 **If `.mdd/.startup.md` does not exist**, create it with the default template:
@@ -81,6 +82,7 @@ Read CLAUDE.md for the full rulebook. Key rules:
 📁 MDD structure initialised:
    .mdd/docs/       ✓ created
    .mdd/audits/     ✓ created
+   .mdd/ops/        ✓ created
    .mdd/.startup.md ✓ created
    .gitignore       ✓ updated (.mdd/audits/ added)
 ```
@@ -108,6 +110,9 @@ Parse `$ARGUMENTS` to determine the mode:
   - `plan-remove-feature` → **Plan-Remove-Feature Mode** (jump to Phase PRF)
   - `plan-cancel-initiative` → **Plan-Cancel-Initiative Mode** (jump to Phase PCI)
 - If arguments start with `commands` → **Commands Mode** (jump to Phase CM)
+- If arguments start with `ops` → **Ops Document Mode** (jump to Phase OP)
+- If arguments start with `runop` → **Ops Execute Mode** (jump to Phase RO)
+- If arguments start with `update-op` → **Ops Update Mode** (jump to Phase UO)
 - If arguments are empty → ask the user what they want to do
 - Otherwise → **Build Mode** (the default — jump to Phase 1)
 
@@ -738,8 +743,8 @@ Triggered when arguments start with `audit`.
 If a section is specified (e.g., `/mdd audit database`), audit only that feature.
 If no section, audit the entire project.
 
-1. **Read all `.mdd/docs/*.md` files** — build the feature map
-2. **If no `.mdd/` directory exists:** Create it with `docs/` and `audits/` subdirectories. Then tell the user: "No MDD documentation found. Run `/mdd` for each feature to create docs first, or I can scan the codebase and create them now. Which do you prefer?"
+1. **Read all `.mdd/docs/*.md` files** — build the feature map. Also read all `.mdd/ops/*.md` files — check for: missing mandatory sections, literal credential values (critical violation), stale `last_synced`, services with no `health_check` defined.
+2. **If no `.mdd/` directory exists:** Create it with `docs/`, `audits/`, and `ops/` subdirectories. Then tell the user: "No MDD documentation found. Run `/mdd` for each feature to create docs first, or I can scan the codebase and create them now. Which do you prefer?"
    - If "scan": read all source files and generate documentation files (Phase 0)
    - If "manual": exit and let the user create docs per feature
 
@@ -850,6 +855,7 @@ Present:
 📊 MDD Status
 
 Feature docs:     <N> files in .mdd/docs/
+Ops runbooks:     <N> files in .mdd/ops/
 Last audit:       <date> (<N> findings, <N> fixed, <N> open)
 Test coverage:    <N> unit tests, <N> E2E tests
 Known issues:     <N> tracked across <N> features
@@ -869,7 +875,7 @@ Drift check:
   <N> features possibly drifted  ← run /mdd scan for details
   <N> features untracked         ← no last_synced field yet
 
-Run `/mdd audit` to refresh, `/mdd scan` to see drift details, `/mdd plan-initiative` to start an initiative, or `/mdd <feature>` to build something new.
+Run `/mdd audit` to refresh, `/mdd scan` to see drift details, `/mdd plan-initiative` to start an initiative, `/mdd ops <description>` to create a deployment runbook, or `/mdd <feature>` to build something new.
 ```
 
 If all files are on the current `mdd_version`, omit the version breakdown and just show: `MDD version: v<N> — all files up to date`
@@ -890,6 +896,7 @@ After collecting status, rebuild the auto-generated zone of `.mdd/.startup.md`:
    - `Branch:` from `git branch --show-current`
    - `Stack:` from `CLAUDE.md` or `claude-mastery-project.conf` if detectable, otherwise `(unknown)`
    - `Features Documented:` sorted list of `.mdd/docs/*.md` filenames with status if detectable from frontmatter
+   - `Ops Runbooks:` sorted list of `.mdd/ops/*.md` filenames with status — omit section entirely if `.mdd/ops/` is empty
    - `Last Audit:` from the most recent `.mdd/audits/report-*.md` — extract findings/fixed/open counts
    - `Rules Summary:` static block (does not change)
 3. Write the rebuilt auto-generated section + `---` divider + preserved Notes section back to `.mdd/.startup.md`. Update `mdd_version` in the file's frontmatter to current.
@@ -935,11 +942,11 @@ Triggered when arguments start with `note`. Three subcommands:
 
 Triggered when arguments start with `scan`. Detects features whose source files have changed since the last MDD session, and checks for initiative/wave drift.
 
-### Phase SC1 — Read all feature docs and initiative/wave files
+### Phase SC1 — Read all feature docs, ops runbooks, and initiative/wave files
 
-Read every `.mdd/docs/*.md` (excluding `archive/`). For each, extract:
+Read every `.mdd/docs/*.md` (excluding `archive/`) and every `.mdd/ops/*.md` (excluding `archive/`). For each, extract:
 - `last_synced` from frontmatter
-- `source_files` list from frontmatter
+- `source_files` list from frontmatter (feature docs) or the ops doc slug for ops runbooks
 
 ### Phase SC2 — Check each feature for drift (parallelized)
 
@@ -1020,6 +1027,16 @@ Initiatives:
   ✅ auth-system (v2) — all waves in sync
   ⚠️  payment-flow (v3) — 1 stale wave
        payment-flow-wave-2 (initiativeVersion: 2, initiative now: 3) → run /mdd plan-sync payment-flow
+```
+
+**Ops runbook drift check** (appended when `.mdd/ops/` has files):
+
+For each ops runbook, check `last_synced` against the last git commit on the runbook file itself. Since ops runbooks track live service state (not source files), drift means the runbook file hasn't been touched since the last `runop`.
+
+```
+Ops Runbooks:
+  ✅ swarmk-dokploy   — last runop: 2026-04-17
+  ⚠️  rulecatch-dokploy — runbook edited 3 days ago but no runop since → run /mdd runop rulecatch-dokploy
 ```
 
 Save the full report to `.mdd/audits/scan-<date>.md`.
@@ -1313,6 +1330,19 @@ Issues:
 
 Issues:
   ❓  auth-system / wave-2 / auth-rate-limit — complete in wave but no doc path set
+```
+
+**Ops Runbooks section** (appended when `.mdd/ops/` has files):
+
+```
+📦 Ops Runbooks
+
+  swarmk-dokploy      — 4 services, 2 regions (eu-west canary → us-east primary)
+  rulecatch-dokploy   — 10 services, 2 regions (eu-west canary → us-east primary)
+
+Service health (last runop):
+  swarmk-dokploy:     all healthy ✓ (2026-04-17)
+  rulecatch-dokploy:  api ✗ failing in eu-west (2026-04-16) → run /mdd runop rulecatch-dokploy
 ```
 
 Save the graph to `.mdd/audits/graph-<date>.md`.
@@ -1840,6 +1870,341 @@ Report:
 
 ---
 
+## OPS DOCUMENT MODE — `/mdd ops <description>`
+
+Triggered when arguments start with `ops`. If arguments are exactly `ops list` → jump to **Ops List Mode** (Phase OL) instead.
+
+### Phase OP1 — Scope, slug, and collision check
+
+**Step 1 — Ask scope first (before anything else):**
+
+```
+Where should this runbook live?
+  (a) Project  — .mdd/ops/<slug>.md   (this project only)
+  (b) Global   — ~/.claude/ops/<slug>.md  (reusable across all projects)
+
+Note: Global ops cannot access project-local .env variables or
+project-specific paths. Use ~/.env globals only.
+```
+
+**Step 2 — Derive slug:**
+Strip `ops` from the start of arguments. Use the remainder as the description.
+Derive a slug: lowercase, hyphens, drop filler words (e.g., "deploy swarmk to dokploy" → `swarmk-dokploy`, "update cloudflare dns" → `cloudflare-dns`).
+
+**Step 3 — Collision check:**
+- If scope is **project**: check whether `~/.claude/ops/<slug>.md` exists.
+  - If global op exists with that slug → **hard stop**:
+    *"A global runbook named `<slug>` already exists (`~/.claude/ops/<slug>.md`). Project ops cannot share a name with a global op — use a different name, or run `/mdd runop <slug>` to execute the global one."*
+- If scope is **global**: check whether `~/.claude/ops/` exists, create it if not (`mkdir -p ~/.claude/ops`).
+
+**Step 4 — Check target location:**
+- Target path: `.mdd/ops/<slug>.md` (project) or `~/.claude/ops/<slug>.md` (global)
+- **Does not exist** → proceed to Phase OP2 (create)
+- **Exists** → tell the user: *"Runbook `<slug>` already exists. Use `/mdd update-op <slug>` to edit it or `/mdd runop <slug>` to execute it."* Stop.
+
+### Phase OP2 — Ask questions
+
+Ask all questions in a single interaction:
+
+1. "What is this deployment? (describe the target — e.g., swarmk API and dashboard to Dokploy US + EU)"
+2. "What platform? (dokploy / docker-hub / vercel / github-actions / manual / other)"
+3. "List all services being deployed — for each: name, Docker image name, port (or none), health check command"
+4. "List your deployment regions — for each: slug, host, platform, deploy order (1 = deploy first / canary)"
+5. "Deployment strategy: sequential or parallel across regions? What gates between regions? (health_check / manual / none)"
+6. "What happens if a canary gate fails? (stop / skip_region / rollback) Auto-rollback on failure? (yes/no)"
+7. "How is deployment triggered? (Dokploy webhook URL as env var, GitHub Actions workflow name, manual command, etc.)"
+8. "What credentials and API keys does this deployment need? List as env var names only — never values. Where is each stored?"
+9. "Are any MCP servers required during deployment? (e.g., strictdb-mcp for post-deploy seeding)"
+10. "What environments does this target? (staging / production / both)"
+
+### Phase OP3 — Write the runbook
+
+Create `.mdd/ops/<slug>.md` with full frontmatter and all 7 mandatory sections:
+
+```markdown
+---
+id: <slug>
+title: <title>
+type: ops
+platform: <platform>
+environments: [<list>]
+deployment_strategy:
+  order: sequential
+  gate: health_check
+  on_gate_failure: stop
+  rollback_on_failure: false
+regions:
+  - slug: <slug>
+    host: <host>
+    platform: <platform>
+    deploy_order: 1
+    role: canary
+  - slug: <slug>
+    host: <host>
+    platform: <platform>
+    deploy_order: 2
+    role: primary
+services:
+  - slug: <name>
+    image: <registry/name:tag>
+    port: <port or ~>
+    health_check: <exact command>
+    regions:
+      <region-slug>:
+        image: <registry/name:tag>
+        status: unknown
+        last_checked: ~
+status: draft
+last_synced: <YYYY-MM-DD>
+mdd_version: <current>
+known_issues: []
+---
+
+# <title>
+
+## Overview
+<What this deployment does and why — 2-3 sentences>
+
+## Services & Ports
+<Table: service | image | port | health endpoint>
+
+## Environment Targets
+<Which environments, what platforms, any environment-specific notes>
+
+## Webhooks & Triggers
+<How deployment is triggered: Dokploy webhook URL as $ENV_VAR, GitHub Actions workflow, manual command, etc.>
+
+## Credentials & API Keys
+<Table: credential name | env var | where stored>
+**NEVER include actual values — env var names only.**
+
+## MCP Servers
+<Any MCP servers required during deployment, or "(none)">
+
+## Deployment Procedure
+<Ordered steps. Each step MUST have: name, command/action, verification check.>
+
+Step 1 (Name):
+  Action:  <exact command>
+  Verify:  <command that returns exit 0 on success>
+
+Step 2 (Name):
+  Action:  <exact command>
+  Verify:  <command that returns exit 0 on success>
+
+## Rollback Plan
+<Specific steps to undo this deployment if it fails. Must be actionable, not "revert the commit".>
+```
+
+### Phase OP4 — Offer next steps
+
+```
+✅ Runbook created: .mdd/ops/<slug>.md
+
+Next steps:
+  /mdd runop <slug>       — execute the runbook now
+  /mdd update-op <slug>   — edit the runbook
+```
+
+---
+
+## OPS EXECUTE MODE — `/mdd runop <slug>`
+
+Triggered when arguments start with `runop`. Executes an existing ops runbook with pre-flight health checks, canary-gated region deployment, and post-flight verification.
+
+### Phase RO1 — Load runbook
+
+1. Parse `<slug>` from arguments — hard stop *"Slug required. Usage: /mdd runop <slug>"* if missing.
+2. Locate the runbook (project-local first, then global):
+   - Check `.mdd/ops/<slug>.md` → found: announce *"Running project runbook: `<slug>`"*
+   - Check `~/.claude/ops/<slug>.md` → found: announce *"Running global runbook: `<slug>`"*
+   - Neither found → hard stop: *"No runbook found for `<slug>` (checked project and global). Run `/mdd ops <description>` to create one, or `/mdd ops list` to see all available runbooks."*
+3. Parse all frontmatter fields: regions (sorted by `deploy_order`), services, `deployment_strategy`.
+
+### Phase RO2 — Pre-flight health check (all regions)
+
+Run each service's `health_check` for each of its declared regions. Display a status table:
+
+```
+Pre-flight Health Check — <slug>
+──────────────────────────────────────────────────
+                     <region-1>       <region-2>
+<service>            ✓ healthy        ✗ failing
+<service>            ✓ healthy        ✓ healthy
+<service>            ? unknown        ? unknown
+
+(last checked: <date> | <date>)
+```
+
+Write updated `status` and `last_checked` to each `services[].regions.<slug>` entry in frontmatter immediately.
+
+For each service that is **not healthy**, ask per region:
+```
+<service> is <status> in <region>. What do you want to do?
+  (a) Redeploy — run this service's deployment steps
+  (b) Skip — continue without touching this service in this region
+  (c) Abort — stop the entire runop
+```
+
+### Phase RO3 — Deploy region by region (in deploy_order)
+
+For each region in `deploy_order` sequence:
+
+**Step A — Deploy services in this region**
+- For each service marked for redeploy in this region:
+  - Use `services[].regions.<slug>.image` (falls back to `services[].image` if not set)
+  - Walk through the service's steps in the Deployment Procedure section
+  - Each step: announce name → run command → run verification check
+  - Verification passes → ✓, continue
+  - Verification fails → STOP, show exact output, surface Rollback Plan section
+  - If `rollback_on_failure: true` → automatically run rollback steps, then stop
+
+**Step B — Region gate**
+
+Run health checks for all services in this region. Display result:
+```
+── <region> (<role>) — gate check ────────────────
+<service>    ✓ healthy  (<image>)
+<service>    ✓ healthy
+Gate: PASSED ✓
+```
+
+If gate is `health_check` and any service is not `healthy`:
+- Apply `on_gate_failure`:
+  - `stop` → halt, show what failed, print: *"<next-region> was NOT deployed — <this-region> gate failed."*
+  - `skip_region` → log failure, advance to next region
+  - `rollback` → run Rollback Plan steps for this region, then stop
+- Write updated status to frontmatter before stopping
+
+If gate is `manual` → always pause: *"<region> deployed. Proceed to <next-region>? (yes / abort)"*
+
+If gate is `none` → advance immediately.
+
+Write updated `status` and `last_checked` for all services in this region to frontmatter.
+
+**Step C — Advance**
+
+Gate passed → proceed to next region in `deploy_order`. Repeat Steps A–B.
+
+### Phase RO4 — Post-flight health check (all regions)
+
+Re-run all service health checks across all regions. Display full cross-region before → after table:
+
+```
+Post-flight Health Check — <slug>
+──────────────────────────────────────────────────────────────
+                     <region-1>                <region-2>
+<service>            ✓ healthy (was ✗)         ✓ healthy
+<service>            ✓ healthy                 ✓ healthy
+```
+
+Write final `status` and `last_checked` to all service region entries in frontmatter.
+Any service still failing → append entry to `known_issues` in the doc.
+
+### Phase RO5 — Summary
+
+```
+runop complete — <slug>
+
+                     <region-1> (canary)   <region-2> (primary)
+<service>            ✓ healthy             ✓ healthy
+<service>            ✓ healthy             ✓ healthy
+
+Canary gate:      PASSED ✓
+Regions deployed: <N>/<N>
+Steps executed:   <N>/<N> ✓
+last_synced:      <YYYY-MM-DD>
+```
+
+If canary gate failed and primary was skipped:
+```
+runop stopped — <slug>
+
+<region-1> (canary):  ✗ gate FAILED — <service> failing after deploy
+<region-2> (primary): NOT deployed — canary gate must pass first
+
+on_gate_failure: stop
+Fix: resolve <service> in <region-1>, then re-run /mdd runop <slug>
+```
+
+---
+
+## OPS UPDATE MODE — `/mdd update-op <slug>`
+
+Triggered when arguments start with `update-op`. Updates an existing ops runbook.
+
+### Phase UO1 — Load
+
+1. Parse `<slug>` — hard stop *"Slug required. Usage: /mdd update-op <slug>"* if missing.
+2. Locate runbook (project-local first, then global):
+   - Check `.mdd/ops/<slug>.md` → found: load it, note scope = project
+   - Check `~/.claude/ops/<slug>.md` → found: load it, note scope = global
+   - Neither found → hard stop: *"No runbook found for `<slug>`. Run `/mdd ops list` to see all available runbooks."*
+
+### Phase UO2 — Re-ask with current values pre-filled
+
+Re-present the Phase OP2 questions with current values shown as defaults. User can accept (press enter) or type a new value. Only changed fields are rewritten.
+
+Show a diff summary before writing:
+```
+Changes detected:
+  + regions: eu-central added
+  ~ services.api.regions.eu-west.image: old-name:v1 → new-name:v2
+  ~ deployment_strategy.on_gate_failure: stop → rollback
+```
+
+Ask: *"Apply these changes? (yes / cancel)"*
+
+### Phase UO3 — Rewrite and update
+
+Rewrite only changed sections. Preserve:
+- `known_issues` (never remove existing entries without asking)
+- Service `status` and `last_checked` values (these are live data, not config)
+
+Update frontmatter: `last_synced: <today>`, `status: draft` if previously `complete` and structural changes were made.
+
+```
+✅ Updated: .mdd/ops/<slug>.md
+   last_synced: <today>
+   Sections rewritten: <list>
+```
+
+---
+
+## OPS LIST MODE — `/mdd ops list`
+
+Triggered when arguments are exactly `ops list`. Lists all ops runbooks — global and project — in a single unified view.
+
+### Phase OL — Scan and display
+
+1. Glob `~/.claude/ops/*.md` — read each, extract `id`, `title`, `platform`, `status`, and the last `last_checked` value across all services.
+2. Glob `.mdd/ops/*.md` (excluding `archive/`) — same fields.
+3. Display unified list, grouped by scope:
+
+```
+📦 Ops Runbooks
+
+Global (~/.claude/ops/)
+  cloudflare-dns        DNS record updates via Cloudflare API        last run: 2026-04-10
+  docker-hub-login      Docker Hub authentication procedure          last run: 2026-03-28
+  ssl-renewal           Let's Encrypt cert renewal (Certbot)        last run: never
+
+Project (.mdd/ops/)
+  rulecatch-dokploy     10 services → eu-west (canary) + us-east    last run: 2026-04-18  ✓ all healthy
+  swarmk-dokploy        7 services → eu-west (canary) + us-east     last run: 2026-04-17  ⚠ api degraded
+
+Run /mdd runop <slug> to execute any runbook.
+```
+
+If either directory is empty or missing, omit that section without error. If both are empty:
+```
+No ops runbooks found.
+  Project: /mdd ops <description>        (saves to .mdd/ops/)
+  Global:  /mdd ops <description>        (choose "global" when prompted)
+```
+
+---
+
 ## COMMANDS MODE — `/mdd commands`
 
 Triggered when arguments start with `commands`. Outputs a reference table of every available MDD mode.
@@ -1872,8 +2237,12 @@ Command                                    | Description
 /mdd plan-sync                             | Plan-Sync Mode — Reconcile manual edits to initiative/wave files
 /mdd plan-remove-feature <wave> <feature>  | Plan-Remove-Feature Mode — Remove a feature from a wave
 /mdd plan-cancel-initiative <slug>         | Plan-Cancel-Initiative Mode — Cancel an initiative and archive its waves
+/mdd ops <description>                     | Ops Document Mode — Create a runbook (asks: global ~/.claude/ops/ or project .mdd/ops/)
+/mdd ops list                              | Ops List Mode — Show all runbooks (global and project) with last-run status
+/mdd runop <slug>                          | Ops Execute Mode — Run a runbook: pre-flight health check, canary-gated deploy, post-flight verify
+/mdd update-op <slug>                      | Ops Update Mode — Edit an existing runbook (checks project then global)
 
-Run /mdd <feature description> to start building, or /mdd audit to check existing code.
+Run /mdd <feature description> to start building, /mdd ops <description> to create a deployment runbook, or /mdd audit to check existing code.
 ```
 
 No files are created or modified by this mode.
