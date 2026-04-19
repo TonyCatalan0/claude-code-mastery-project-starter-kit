@@ -1872,15 +1872,35 @@ Report:
 
 ## OPS DOCUMENT MODE — `/mdd ops <description>`
 
-Triggered when arguments start with `ops`. Creates a new ops runbook in `.mdd/ops/`.
+Triggered when arguments start with `ops`. If arguments are exactly `ops list` → jump to **Ops List Mode** (Phase OL) instead.
 
-### Phase OP1 — Derive slug and check for existing doc
+### Phase OP1 — Scope, slug, and collision check
 
-1. Strip `ops` from the start of arguments. Use the remainder as the description.
-2. Derive a slug: lowercase, hyphens, drop filler words (e.g., "deploy swarmk to dokploy" → `swarmk-dokploy`, "api docker hub" → `api-docker-hub`).
-3. Check `.mdd/ops/<slug>.md`:
-   - **Does not exist** → proceed to Phase OP2 (create)
-   - **Exists** → tell the user: *"Runbook `<slug>` already exists. Use `/mdd update-op <slug>` to edit it or `/mdd runop <slug>` to execute it."* Stop.
+**Step 1 — Ask scope first (before anything else):**
+
+```
+Where should this runbook live?
+  (a) Project  — .mdd/ops/<slug>.md   (this project only)
+  (b) Global   — ~/.claude/ops/<slug>.md  (reusable across all projects)
+
+Note: Global ops cannot access project-local .env variables or
+project-specific paths. Use ~/.env globals only.
+```
+
+**Step 2 — Derive slug:**
+Strip `ops` from the start of arguments. Use the remainder as the description.
+Derive a slug: lowercase, hyphens, drop filler words (e.g., "deploy swarmk to dokploy" → `swarmk-dokploy`, "update cloudflare dns" → `cloudflare-dns`).
+
+**Step 3 — Collision check:**
+- If scope is **project**: check whether `~/.claude/ops/<slug>.md` exists.
+  - If global op exists with that slug → **hard stop**:
+    *"A global runbook named `<slug>` already exists (`~/.claude/ops/<slug>.md`). Project ops cannot share a name with a global op — use a different name, or run `/mdd runop <slug>` to execute the global one."*
+- If scope is **global**: check whether `~/.claude/ops/` exists, create it if not (`mkdir -p ~/.claude/ops`).
+
+**Step 4 — Check target location:**
+- Target path: `.mdd/ops/<slug>.md` (project) or `~/.claude/ops/<slug>.md` (global)
+- **Does not exist** → proceed to Phase OP2 (create)
+- **Exists** → tell the user: *"Runbook `<slug>` already exists. Use `/mdd update-op <slug>` to edit it or `/mdd runop <slug>` to execute it."* Stop.
 
 ### Phase OP2 — Ask questions
 
@@ -1995,8 +2015,10 @@ Triggered when arguments start with `runop`. Executes an existing ops runbook wi
 ### Phase RO1 — Load runbook
 
 1. Parse `<slug>` from arguments — hard stop *"Slug required. Usage: /mdd runop <slug>"* if missing.
-2. Read `.mdd/ops/<slug>.md` — hard stop if not found:
-   *"No runbook found for `<slug>`. Run `/mdd ops <description>` to create one."*
+2. Locate the runbook (project-local first, then global):
+   - Check `.mdd/ops/<slug>.md` → found: announce *"Running project runbook: `<slug>`"*
+   - Check `~/.claude/ops/<slug>.md` → found: announce *"Running global runbook: `<slug>`"*
+   - Neither found → hard stop: *"No runbook found for `<slug>` (checked project and global). Run `/mdd ops <description>` to create one, or `/mdd ops list` to see all available runbooks."*
 3. Parse all frontmatter fields: regions (sorted by `deploy_order`), services, `deployment_strategy`.
 
 ### Phase RO2 — Pre-flight health check (all regions)
@@ -2114,7 +2136,10 @@ Triggered when arguments start with `update-op`. Updates an existing ops runbook
 ### Phase UO1 — Load
 
 1. Parse `<slug>` — hard stop *"Slug required. Usage: /mdd update-op <slug>"* if missing.
-2. Read `.mdd/ops/<slug>.md` — hard stop if not found: *"No runbook found for `<slug>`."*
+2. Locate runbook (project-local first, then global):
+   - Check `.mdd/ops/<slug>.md` → found: load it, note scope = project
+   - Check `~/.claude/ops/<slug>.md` → found: load it, note scope = global
+   - Neither found → hard stop: *"No runbook found for `<slug>`. Run `/mdd ops list` to see all available runbooks."*
 
 ### Phase UO2 — Re-ask with current values pre-filled
 
@@ -2142,6 +2167,40 @@ Update frontmatter: `last_synced: <today>`, `status: draft` if previously `compl
 ✅ Updated: .mdd/ops/<slug>.md
    last_synced: <today>
    Sections rewritten: <list>
+```
+
+---
+
+## OPS LIST MODE — `/mdd ops list`
+
+Triggered when arguments are exactly `ops list`. Lists all ops runbooks — global and project — in a single unified view.
+
+### Phase OL — Scan and display
+
+1. Glob `~/.claude/ops/*.md` — read each, extract `id`, `title`, `platform`, `status`, and the last `last_checked` value across all services.
+2. Glob `.mdd/ops/*.md` (excluding `archive/`) — same fields.
+3. Display unified list, grouped by scope:
+
+```
+📦 Ops Runbooks
+
+Global (~/.claude/ops/)
+  cloudflare-dns        DNS record updates via Cloudflare API        last run: 2026-04-10
+  docker-hub-login      Docker Hub authentication procedure          last run: 2026-03-28
+  ssl-renewal           Let's Encrypt cert renewal (Certbot)        last run: never
+
+Project (.mdd/ops/)
+  rulecatch-dokploy     10 services → eu-west (canary) + us-east    last run: 2026-04-18  ✓ all healthy
+  swarmk-dokploy        7 services → eu-west (canary) + us-east     last run: 2026-04-17  ⚠ api degraded
+
+Run /mdd runop <slug> to execute any runbook.
+```
+
+If either directory is empty or missing, omit that section without error. If both are empty:
+```
+No ops runbooks found.
+  Project: /mdd ops <description>        (saves to .mdd/ops/)
+  Global:  /mdd ops <description>        (choose "global" when prompted)
 ```
 
 ---
@@ -2178,9 +2237,10 @@ Command                                    | Description
 /mdd plan-sync                             | Plan-Sync Mode — Reconcile manual edits to initiative/wave files
 /mdd plan-remove-feature <wave> <feature>  | Plan-Remove-Feature Mode — Remove a feature from a wave
 /mdd plan-cancel-initiative <slug>         | Plan-Cancel-Initiative Mode — Cancel an initiative and archive its waves
-/mdd ops <description>                     | Ops Document Mode — Create a new deployment runbook in .mdd/ops/
+/mdd ops <description>                     | Ops Document Mode — Create a runbook (asks: global ~/.claude/ops/ or project .mdd/ops/)
+/mdd ops list                              | Ops List Mode — Show all runbooks (global and project) with last-run status
 /mdd runop <slug>                          | Ops Execute Mode — Run a runbook: pre-flight health check, canary-gated deploy, post-flight verify
-/mdd update-op <slug>                      | Ops Update Mode — Edit an existing deployment runbook
+/mdd update-op <slug>                      | Ops Update Mode — Edit an existing runbook (checks project then global)
 
 Run /mdd <feature description> to start building, /mdd ops <description> to create a deployment runbook, or /mdd audit to check existing code.
 ```
