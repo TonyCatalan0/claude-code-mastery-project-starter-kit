@@ -143,6 +143,7 @@
       <a href="#mdd-workflow">MDD Workflow ✨ NEW</a>
       <a href="#mdd-startup-context">Startup Context</a>
       <a href="#mdd-dashboard">MDD Dashboard</a>
+      <a href="#ops-mode">Ops Mode</a>
       <a href="#featured-packages">Featured Packages</a>
       <a href="#what-is-this">What Is This?</a>
       <a href="#learning-path">Learning Path</a>
@@ -208,6 +209,7 @@
         <a href="#mdd-workflow" class="nav-new">MDD Workflow ✨ NEW</a>
         <a href="#mdd-startup-context" style="padding-left: 2rem; font-size: 0.9em;">Startup Context</a>
         <a href="#mdd-dashboard" style="padding-left: 2rem; font-size: 0.9em;">MDD Dashboard</a>
+        <a href="#ops-mode" style="padding-left: 2rem; font-size: 0.9em;">Ops Mode</a>
         <a href="#featured-packages">Featured Packages</a>
         <a href="#what-is-this">What Is This?</a>
         <a href="#learning-path">Learning Path</a>
@@ -659,6 +661,125 @@ mdd status       # same — all three open the dashboard</code></pre>
         </div>
 
         <p style="margin-top: 1rem;">npm: <a href="https://www.npmjs.com/package/mdd-tui" target="_blank" rel="noopener">mdd-tui</a> &middot; <a href="https://github.com/TheDecipherist/mdd" target="_blank" rel="noopener">GitHub</a></p>
+      </section>
+
+      <!-- Ops Mode -->
+      <section id="ops-mode">
+        <h2>Ops Mode <span style="background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; font-size: 0.5em; padding: 0.2em 0.6em; border-radius: 999px; vertical-align: middle; margin-left: 0.5em;">NEW</span></h2>
+        <p style="font-size: 1.1em; color: var(--text-secondary); margin-bottom: 1.5rem;">Document-first deployments &mdash; the same discipline MDD brings to features, now applied to ops tasks. Runbooks replace improvised deploys. Every region is gated. If canary fails, primary is never touched.</p>
+
+        <div class="callout" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(239, 68, 68, 0.05)); border-left: 4px solid #f59e0b; padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+          <strong>What Ops Mode fixes:</strong> MDD's original flaw &mdash; deployment and ops tasks had no documentation home. They fell into Build Mode or were skipped entirely. Ops Mode gives deployments the same document-first discipline as features. Write the runbook once; <code>/mdd runop</code> executes it every time.
+        </div>
+
+        <h3>The Three Commands</h3>
+        <div class="commands-grid" style="margin-bottom: 2rem;">
+          <div class="command-card">
+            <h3><code>/mdd ops &lt;description&gt;</code></h3>
+            <p class="command-desc">Create a new deployment runbook in <code>.mdd/ops/</code>. Interviews you about services, regions, health checks, rollback criteria, and deployment strategy. Produces a structured YAML-frontmatter runbook that <code>runop</code> can execute.</p>
+          </div>
+          <div class="command-card">
+            <h3><code>/mdd runop &lt;slug&gt;</code></h3>
+            <p class="command-desc">Execute a runbook end-to-end: pre-flight health check &rarr; canary-gated region deploy &rarr; post-flight verify. Reads the ops doc as the source of truth. Executes step-by-step with verification at each step. If any gate fails, execution stops &mdash; the next region is never touched.</p>
+          </div>
+          <div class="command-card">
+            <h3><code>/mdd update-op &lt;slug&gt;</code></h3>
+            <p class="command-desc">Edit an existing runbook. Updates services, regions, health endpoints, rollback criteria, or deployment strategy. Re-validates the runbook structure after editing so <code>runop</code> always has a consistent doc to execute from.</p>
+          </div>
+        </div>
+
+        <h3>The Runbook Concept</h3>
+        <p>A runbook is a structured ops document in <code>.mdd/ops/</code> with YAML frontmatter declaring services, regions, deployment order, health check endpoints, and gate behaviour. It is the single source of truth for a deployment. <code>/mdd runop</code> reads it and executes it &mdash; you do not hand-craft the sequence each time.</p>
+        <p><strong>Write once, runs every time.</strong> Once a runbook exists, every future deployment of that service runs through the same documented sequence, with the same pre-flight checks, the same canary gate, and the same post-flight verification. Nothing falls through the cracks because someone forgot a step.</p>
+
+        <h3>Canary Deployment Pattern</h3>
+        <p>Ops Mode enforces a canary-first deployment model. Regions are ordered by <code>deploy_order</code> in the runbook frontmatter. The canary region always deploys first &mdash; only if all its services pass the health gate does the primary region proceed.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #f59e0b;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">🔍</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Pre-flight</strong>
+            <small style="color: var(--text-muted);">Health-check all regions before any deploy begins</small>
+          </div>
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #8b5cf6;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">🐦</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Canary Deploy</strong>
+            <small style="color: var(--text-muted);">Deploy to canary region first (deploy_order: 1)</small>
+          </div>
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #3b82f6;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">🚦</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Canary Gate</strong>
+            <small style="color: var(--text-muted);">All services must be healthy before advancing</small>
+          </div>
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #10b981;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">🚀</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Primary Deploy</strong>
+            <small style="color: var(--text-muted);">Only then deploy to primary region (deploy_order: 2)</small>
+          </div>
+          <div style="background: var(--bg-secondary); border-radius: 0.75rem; padding: 1.25rem; text-align: center; border-top: 3px solid #06b6d4;">
+            <div style="font-size: 1.5em; margin-bottom: 0.5rem;">✅</div>
+            <strong style="display: block; margin-bottom: 0.25rem;">Post-flight</strong>
+            <small style="color: var(--text-muted);">Verify all regions healthy, update runbook frontmatter</small>
+          </div>
+        </div>
+
+        <p>If the canary gate fails &mdash; any service unhealthy after deploy &mdash; the primary region is never touched. It is still running the old version. You can redeploy to canary, skip that region, or abort entirely. The gate behaviour is configurable: <code>stop</code> (default), <code>skip_region</code>, or <code>rollback</code>.</p>
+
+        <h3>Pre-flight Health Check</h3>
+        <p>Before any deployment begins, <code>/mdd runop</code> checks the current health of all services across all regions. If a service is already failing before you deploy, you know upfront &mdash; not after the deploy makes it worse. The pre-flight table surfaces this clearly and prompts for a decision:</p>
+
+        <pre><code class="language-text">Pre-flight Health Check — rulecatch-dokploy
+──────────────────────────────────────────────────
+                     eu-west (canary)  us-east (primary)
+api                  ✓ healthy         ✓ healthy
+dashboard            ✗ failing         ✓ healthy
+worker               ✓ healthy         ✓ healthy
+
+dashboard is failing in eu-west. Redeploy, skip, or abort?</code></pre>
+
+        <h3>Canary Gate Output</h3>
+        <p>After the canary deploy completes, <code>/mdd runop</code> re-checks every service in the canary region. The gate output shows exactly which image each service is running and its health status:</p>
+
+        <pre><code class="language-text">── eu-west (canary) — gate check ──────────────
+api         ✓ healthy  (rulecatch-api-eu:latest)
+dashboard   ✓ healthy
+worker      ✓ healthy
+Gate: PASSED ✓ — advancing to us-east (primary)</code></pre>
+
+        <h3>Multi-Region, Multi-Image Support</h3>
+        <p>Each service can have a different Docker image name per region. This supports regional image registries, blue-green strategies, or teams that maintain separate EU and US image builds. Per-region health status is tracked in the runbook frontmatter so the dashboard can show the last-known state of every region at a glance.</p>
+
+        <div class="commands-grid" style="margin: 1.5rem 0;">
+          <div class="command-card">
+            <h3>Per-Region Images</h3>
+            <p class="command-desc">Each service declares its image name per region in the runbook frontmatter. <code>runop</code> reads the correct image for each region automatically &mdash; no manual substitution.</p>
+          </div>
+          <div class="command-card">
+            <h3>Health Status Tracking</h3>
+            <p class="command-desc">After each runop execution, the runbook frontmatter is updated with the last-known health status per region and service. <code>/mdd status</code> can surface this in the startup context.</p>
+          </div>
+          <div class="command-card">
+            <h3>Deployment Strategies</h3>
+            <p class="command-desc"><code>deployment_strategy: sequential</code> deploys regions one at a time with gates between each. <code>deployment_strategy: parallel</code> deploys non-canary regions simultaneously after the canary gate passes.</p>
+          </div>
+          <div class="command-card">
+            <h3>Gate Behaviour</h3>
+            <p class="command-desc"><code>gate_on_fail: stop</code> halts execution (default). <code>skip_region</code> logs the failure and continues to remaining regions. <code>rollback</code> triggers the runbook&rsquo;s defined rollback procedure before stopping.</p>
+          </div>
+        </div>
+
+        <h3>The <code>.mdd/ops/</code> Directory</h3>
+        <p>All ops runbooks live in <code>.mdd/ops/</code>, alongside feature docs and audit artifacts:</p>
+        <pre><code class="language-bash">.mdd/
+├── docs/                          # Feature documentation
+├── ops/                           # Deployment runbooks (Ops Mode)
+│   ├── rulecatch-dokploy.md       # Multi-region Dokploy deploy runbook
+│   └── api-rollback.md            # Emergency rollback runbook
+├── initiatives/
+├── waves/
+└── audits/</code></pre>
+
+        <p>Runbooks are gitignored by default alongside the rest of <code>.mdd/</code> &mdash; they contain environment-specific configuration (region URLs, health endpoints, image names) that belongs in your local workspace, not version control.</p>
       </section>
 
       <!-- Featured Packages -->

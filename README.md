@@ -436,7 +436,120 @@ The dashboard auto-detects drift by running `git log` against each doc's `last_s
 
 npm: [mdd-tui](https://www.npmjs.com/package/mdd-tui) · GitHub: [TheDecipherist/mdd](https://github.com/TheDecipherist/mdd)
 
-> **Recommended: install MDD globally.** Run `/install-global` once and answer "yes" to the MDD prompt — `/mdd` is then available in every project on your machine with no per-project setup. Update the starter kit once and every project picks up the new version automatically on the next session. When you run `/mdd` for the first time in a fresh project, it auto-creates the `.mdd/` structure (docs, audits, `.startup.md`) — no separate `/install-mdd` step needed.
+> **Recommended: install MDD globally.** Run `/install-global` once and answer "yes" to the MDD prompt — `/mdd` is then available in every project on your machine with no per-project setup. Update the starter kit once and every project picks up the new version automatically on the next session. When you run `/mdd` for the first time in a fresh project, it auto-creates the `.mdd/` structure (docs, audits, ops, `.startup.md`) — no separate `/install-mdd` step needed.
+
+---
+
+## Ops Mode — Deployment Runbooks ✨ NEW
+
+> **The flaw MDD had:** Deployment and infrastructure tasks had no documentation home. Running `/mdd dokploy-deploy` defaulted to Build Mode and skipped the documentation phases — because deploying services isn't a feature to build. Ops Mode fixes this.
+
+MDD now treats deployments as first-class citizens. Every deployment target gets a structured runbook in `.mdd/ops/`. Write it once — then `runop` executes it every time, with live health checks, verified steps, and canary-gated multi-region rollout.
+
+### The Three Commands
+
+| Command | What it does |
+|---|---|
+| `/mdd ops <description>` | Create a new deployment runbook — asks about services, regions, images, credentials, webhooks, and deployment strategy |
+| `/mdd runop <slug>` | Execute the runbook — pre-flight health check → canary-gated region deploy → post-flight verify |
+| `/mdd update-op <slug>` | Edit an existing runbook — re-asks questions with current values pre-filled, shows a diff before writing |
+
+### Write Once, Runs Every Time
+
+```bash
+# First time — creates the runbook
+/mdd ops "deploy rulecatch services to dokploy US and EU"
+
+# Every deployment after — reads the runbook, no questions asked
+/mdd runop rulecatch-dokploy
+```
+
+`runop` reads `.mdd/ops/rulecatch-dokploy.md` and executes the full deployment: pre-flight checks, step-by-step procedure with verification at each step, and post-flight confirmation. No tribal knowledge. No forgotten steps. The doc IS the deployment.
+
+### Canary-Gated Multi-Region Deployment
+
+Deploy to your canary region first. Gate on full health verification. Only then touch primary. If canary fails — primary is never touched, still running the last good version.
+
+```
+Pre-flight Health Check — rulecatch-dokploy
+──────────────────────────────────────────────────────────
+                     eu-west (canary)   us-east (primary)
+api                  ✓ healthy          ✓ healthy
+dashboard            ✗ failing          ✓ healthy
+worker               ✓ healthy          ✓ healthy
+
+dashboard is failing in eu-west.
+  (a) Redeploy   (b) Skip   (c) Abort
+```
+
+```
+── eu-west (canary) — gate check ───────────────────────
+api         ✓ healthy  (rulecatch-api-eu:latest)
+dashboard   ✓ healthy  (rulecatch-dashboard-eu:latest)
+worker      ✓ healthy
+Gate: PASSED ✓ — advancing to us-east (primary)
+```
+
+```
+runop complete — rulecatch-dokploy
+
+                     eu-west (canary)   us-east (primary)
+api                  ✓ healthy          ✓ healthy
+dashboard            ✓ healthy          ✓ healthy
+worker               ✓ healthy          ✓ healthy
+
+Canary gate:      PASSED ✓
+Regions deployed: 2/2
+Steps executed:   14/14 ✓
+```
+
+### Per-Region Docker Image Overrides
+
+Different image names for different regions? Fully supported. Each service has a default image plus per-region overrides:
+
+```yaml
+services:
+  - slug: api
+    image: theDecipherist/rulecatch-api:latest        # default
+    regions:
+      eu-west:
+        image: theDecipherist/rulecatch-api-eu:latest # different name for EU
+        status: healthy
+        last_checked: 2026-04-18T10:00:00Z
+      us-east:
+        image: theDecipherist/rulecatch-api:latest    # same as default
+        status: healthy
+        last_checked: 2026-04-18T10:05:00Z
+```
+
+All keys are always fully populated — no implicit inheritance that breaks when you add a second region.
+
+### Deployment Strategy Control
+
+```yaml
+deployment_strategy:
+  order: sequential          # sequential | parallel
+  gate: health_check         # health_check | manual | none
+  on_gate_failure: stop      # stop | skip_region | rollback
+  rollback_on_failure: false # auto-run rollback steps on failure
+```
+
+`on_gate_failure: stop` — canary fails, primary untouched. Investigate, fix, re-run.
+`on_gate_failure: rollback` — canary fails, auto-rollback EU, primary untouched.
+`on_gate_failure: skip_region` — skip the failed region and continue to primary (useful when EU is lower priority).
+
+### What Lives in `.mdd/ops/`
+
+```
+.mdd/
+├── docs/            ← feature docs  (type: feature | task)
+└── ops/             ← deployment runbooks  (type: ops)
+    ├── rulecatch-dokploy.md
+    ├── swarmk-dokploy.md
+    └── archive/
+```
+
+All existing modes are ops-aware: `/mdd status` shows ops runbook count, `/mdd scan` checks runbook drift, `/mdd graph` includes a runbook health summary, `/mdd audit` flags missing sections and credential security violations.
 
 ---
 
