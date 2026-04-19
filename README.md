@@ -444,15 +444,29 @@ npm: [mdd-tui](https://www.npmjs.com/package/mdd-tui) · GitHub: [TheDecipherist
 
 > **The flaw MDD had:** Deployment and infrastructure tasks had no documentation home. Running `/mdd dokploy-deploy` defaulted to Build Mode and skipped the documentation phases — because deploying services isn't a feature to build. Ops Mode fixes this.
 
-MDD now treats deployments as first-class citizens. Every deployment target gets a structured runbook in `.mdd/ops/`. Write it once — then `runop` executes it every time, with live health checks, verified steps, and canary-gated multi-region rollout.
+MDD now treats deployments as first-class citizens. Every deployment target gets a structured runbook — either project-local or global. Write it once — then `runop` executes it every time, with live health checks, verified steps, and canary-gated multi-region rollout.
 
-### The Three Commands
+### Commands
 
 | Command | What it does |
 |---|---|
-| `/mdd ops <description>` | Create a new deployment runbook — asks about services, regions, images, credentials, webhooks, and deployment strategy |
-| `/mdd runop <slug>` | Execute the runbook — pre-flight health check → canary-gated region deploy → post-flight verify |
-| `/mdd update-op <slug>` | Edit an existing runbook — re-asks questions with current values pre-filled, shows a diff before writing |
+| `/mdd ops <description>` | Create a runbook — **first question is always: global or project?** |
+| `/mdd ops list` | List all runbooks — global and project — with last-run health status |
+| `/mdd runop <slug>` | Execute a runbook — checks project-local first, then global |
+| `/mdd update-op <slug>` | Edit an existing runbook — same lookup order |
+
+### Global vs Project Scope
+
+The **first thing `/mdd ops` asks** is where the runbook should live:
+
+| Scope | Location | Use for |
+|---|---|---|
+| **Project** | `.mdd/ops/<slug>.md` | This project only (e.g., deploy this specific app to Dokploy) |
+| **Global** | `~/.claude/ops/<slug>.md` | Reusable across all projects (e.g., update Cloudflare DNS, renew SSL certs, Docker Hub login) |
+
+> **Global ops cannot access project-local `.env` variables or project paths.** They use `~/.env` globals only — which is exactly right for infrastructure procedures that don't belong to any one project.
+
+**Global is the authoritative namespace.** If a global runbook named `cloudflare-dns` exists, no project can create a local runbook with the same name. This prevents any ambiguity about which runbook `runop` will execute — you always know exactly what runs.
 
 ### Write Once, Runs Every Time
 
@@ -538,12 +552,36 @@ deployment_strategy:
 `on_gate_failure: rollback` — canary fails, auto-rollback EU, primary untouched.
 `on_gate_failure: skip_region` — skip the failed region and continue to primary (useful when EU is lower priority).
 
-### What Lives in `.mdd/ops/`
+### Listing All Runbooks
+
+```bash
+/mdd ops list
+```
 
 ```
+📦 Ops Runbooks
+
+Global (~/.claude/ops/)
+  cloudflare-dns        DNS record updates via Cloudflare API       last run: 2026-04-10
+  ssl-renewal           Let's Encrypt cert renewal (Certbot)        last run: never
+
+Project (.mdd/ops/)
+  rulecatch-dokploy     10 services → eu-west (canary) + us-east    last run: 2026-04-18  ✓ all healthy
+  swarmk-dokploy        7 services → eu-west (canary) + us-east     last run: 2026-04-17  ⚠ api degraded
+
+Run /mdd runop <slug> to execute any runbook.
+```
+
+### Where Runbooks Live
+
+```
+~/.claude/ops/           ← global runbooks (all projects)
+  cloudflare-dns.md
+  ssl-renewal.md
+
 .mdd/
-├── docs/            ← feature docs  (type: feature | task)
-└── ops/             ← deployment runbooks  (type: ops)
+├── docs/                ← feature docs  (type: feature | task)
+└── ops/                 ← project runbooks (this project only)
     ├── rulecatch-dokploy.md
     ├── swarmk-dokploy.md
     └── archive/

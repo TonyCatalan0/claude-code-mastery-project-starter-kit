@@ -672,21 +672,79 @@ mdd status       # same — all three open the dashboard</code></pre>
           <strong>What Ops Mode fixes:</strong> MDD's original flaw &mdash; deployment and ops tasks had no documentation home. They fell into Build Mode or were skipped entirely. Ops Mode gives deployments the same document-first discipline as features. Write the runbook once; <code>/mdd runop</code> executes it every time.
         </div>
 
-        <h3>The Three Commands</h3>
+        <h3>The Four Commands</h3>
         <div class="commands-grid" style="margin-bottom: 2rem;">
           <div class="command-card">
             <h3><code>/mdd ops &lt;description&gt;</code></h3>
-            <p class="command-desc">Create a new deployment runbook in <code>.mdd/ops/</code>. Interviews you about services, regions, health checks, rollback criteria, and deployment strategy. Produces a structured YAML-frontmatter runbook that <code>runop</code> can execute.</p>
+            <p class="command-desc">Create a new deployment runbook. First asks: global (<code>~/.claude/ops/</code>) or project-scoped (<code>.mdd/ops/</code>)? Interviews you about services, regions, health checks, rollback criteria, and deployment strategy. Produces a structured YAML-frontmatter runbook that <code>runop</code> can execute.</p>
           </div>
           <div class="command-card">
             <h3><code>/mdd runop &lt;slug&gt;</code></h3>
-            <p class="command-desc">Execute a runbook end-to-end: pre-flight health check &rarr; canary-gated region deploy &rarr; post-flight verify. Reads the ops doc as the source of truth. Executes step-by-step with verification at each step. If any gate fails, execution stops &mdash; the next region is never touched.</p>
+            <p class="command-desc">Execute a runbook end-to-end: pre-flight health check &rarr; canary-gated region deploy &rarr; post-flight verify. Checks project-local first, then global. Reads the ops doc as the source of truth. If any gate fails, execution stops &mdash; the next region is never touched.</p>
           </div>
           <div class="command-card">
             <h3><code>/mdd update-op &lt;slug&gt;</code></h3>
-            <p class="command-desc">Edit an existing runbook. Updates services, regions, health endpoints, rollback criteria, or deployment strategy. Re-validates the runbook structure after editing so <code>runop</code> always has a consistent doc to execute from.</p>
+            <p class="command-desc">Edit an existing runbook. Checks project-local first, then global. Updates services, regions, health endpoints, rollback criteria, or deployment strategy. Re-validates the runbook structure after editing.</p>
+          </div>
+          <div class="command-card">
+            <h3><code>/mdd ops list</code></h3>
+            <p class="command-desc">Show all runbooks &mdash; global and project-scoped &mdash; in a unified view. Displays slug, scope, platform, environments, and status so you can see everything available at a glance.</p>
           </div>
         </div>
+
+        <h3>Global vs Project Scope</h3>
+        <p><code>/mdd ops</code> asks scope as its very first question. The answer controls where the runbook is stored and how it is shared.</p>
+
+        <div style="overflow-x: auto; margin: 1.5rem 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+            <thead>
+              <tr style="background: var(--bg-secondary);">
+                <th style="text-align: left; padding: 0.75rem 1rem; border-bottom: 2px solid var(--border);">Scope</th>
+                <th style="text-align: left; padding: 0.75rem 1rem; border-bottom: 2px solid var(--border);">Location</th>
+                <th style="text-align: left; padding: 0.75rem 1rem; border-bottom: 2px solid var(--border);">Available</th>
+                <th style="text-align: left; padding: 0.75rem 1rem; border-bottom: 2px solid var(--border);">Use for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);"><strong>Global</strong></td>
+                <td style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);"><code>~/.claude/ops/&lt;slug&gt;.md</code></td>
+                <td style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);">All projects</td>
+                <td style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);">Docker Hub login, DNS updates, Vercel deploys, reusable infrastructure tasks</td>
+              </tr>
+              <tr>
+                <td style="padding: 0.75rem 1rem;"><strong>Project</strong></td>
+                <td style="padding: 0.75rem 1rem;"><code>.mdd/ops/&lt;slug&gt;.md</code></td>
+                <td style="padding: 0.75rem 1rem;">This project only</td>
+                <td style="padding: 0.75rem 1rem;">Service-specific deploys, project env vars, region-specific image names</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout" style="background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b; padding: 1rem 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+          <strong>Global scope note:</strong> Global ops cannot read project-local <code>.env</code> variables or project paths. They have access to <code>~/.env</code> globals only. If your runbook needs <code>DOCKER_HUB_TOKEN</code> or other global secrets, store them in <code>~/.env</code> and reference them there.
+        </div>
+
+        <div class="callout" style="background: rgba(239, 68, 68, 0.08); border-left: 4px solid #ef4444; padding: 1rem 1.25rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+          <strong>Collision guard:</strong> Global namespace is authoritative. If a global op named <code>docker-hub-push</code> already exists, you cannot create a project op with the same slug. This is a hard stop &mdash; no silent shadowing. Rename one of them to avoid ambiguity.
+        </div>
+
+        <h3>Listing All Runbooks</h3>
+        <p><code>/mdd ops list</code> shows all runbooks across both scopes in a unified view:</p>
+        <pre><code class="language-text">Ops Runbooks
+────────────────────────────────────────────────────────────
+
+Global (~/.claude/ops/)
+  docker-hub-login       docker-hub    all projects    complete
+  dns-cloudflare         manual        all projects    draft
+
+Project (.mdd/ops/)
+  rulecatch-dokploy      dokploy       staging, prod   in_progress
+  api-rollback           manual        production      draft
+
+4 runbooks total (2 global, 2 project)
+Run /mdd runop &lt;slug&gt; to execute any runbook.</code></pre>
 
         <h3>The Runbook Concept</h3>
         <p>A runbook is a structured ops document in <code>.mdd/ops/</code> with YAML frontmatter declaring services, regions, deployment order, health check endpoints, and gate behaviour. It is the single source of truth for a deployment. <code>/mdd runop</code> reads it and executes it &mdash; you do not hand-craft the sequence each time.</p>
@@ -768,18 +826,28 @@ Gate: PASSED ✓ — advancing to us-east (primary)</code></pre>
           </div>
         </div>
 
-        <h3>The <code>.mdd/ops/</code> Directory</h3>
-        <p>All ops runbooks live in <code>.mdd/ops/</code>, alongside feature docs and audit artifacts:</p>
-        <pre><code class="language-bash">.mdd/
+        <h3>Directory Structure</h3>
+        <p>Project runbooks live in <code>.mdd/ops/</code>. Global runbooks live in <code>~/.claude/ops/</code> alongside your other global Claude config:</p>
+        <pre><code class="language-bash"># Project-scoped runbooks (this project only)
+.mdd/
 ├── docs/                          # Feature documentation
-├── ops/                           # Deployment runbooks (Ops Mode)
+├── ops/                           # Project deployment runbooks
 │   ├── rulecatch-dokploy.md       # Multi-region Dokploy deploy runbook
 │   └── api-rollback.md            # Emergency rollback runbook
 ├── initiatives/
 ├── waves/
-└── audits/</code></pre>
+└── audits/
 
-        <p>Runbooks are gitignored by default alongside the rest of <code>.mdd/</code> &mdash; they contain environment-specific configuration (region URLs, health endpoints, image names) that belongs in your local workspace, not version control.</p>
+# Global runbooks (available in every project)
+~/.claude/
+├── commands/                      # Global slash commands
+├── skills/                        # Global skills
+├── ops/                           # Global deployment runbooks ← NEW
+│   ├── docker-hub-login.md        # Reusable Docker Hub auth runbook
+│   └── dns-cloudflare.md          # DNS update runbook (any project)
+└── CLAUDE.md</code></pre>
+
+        <p>Project runbooks are gitignored by default alongside the rest of <code>.mdd/</code> &mdash; they contain environment-specific configuration (region URLs, health endpoints, image names) that belongs in your local workspace, not version control. Global runbooks persist in your home directory and are never project-specific.</p>
       </section>
 
       <!-- Featured Packages -->
